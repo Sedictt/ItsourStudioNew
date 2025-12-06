@@ -1,9 +1,41 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useBooking } from '../context/BookingContext';
+import { db } from '../firebase';
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import FeedbackModal from '../components/FeedbackModal';
+
+interface Feedback {
+    id: string;
+    name: string;
+    rating: number;
+    message: string;
+    showInTestimonials: boolean;
+}
 
 const Home = () => {
     const { openBooking } = useBooking();
+    const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+
+    useEffect(() => {
+        const q = query(
+            collection(db, 'feedbacks'),
+            where('showInTestimonials', '==', true),
+            orderBy('createdAt', 'desc'),
+            limit(3)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const feedbacksData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as Feedback[];
+            setFeedbacks(feedbacksData);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         // Scroll to top on mount
@@ -168,6 +200,44 @@ const Home = () => {
                     </div>
                 </div>
             </section>
+
+            {/* Testimonials Section */}
+            <section id="testimonials" className="testimonials-section">
+                <div className="container">
+                    <div className="section-header">
+                        <h2 className="section-title">Happy Faces</h2>
+                        <p className="section-subtitle">Stories from our studio</p>
+                    </div>
+
+                    <div className="testimonials-grid">
+                        {feedbacks.length > 0 ? (
+                            feedbacks.map((feedback) => (
+                                <div className="testimonial-card" key={feedback.id}>
+                                    <div className="stars">{'★'.repeat(feedback.rating)}</div>
+                                    <p className="testimonial-quote">{feedback.message}</p>
+                                    <div className="testimonial-author">
+                                        <div className="author-avatar">{feedback.name.charAt(0)}</div>
+                                        <div className="author-info">
+                                            <h4>{feedback.name}</h4>
+                                            <span className="author-role">Verified Customer</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="testimonial-card" style={{ gridColumn: '1 / -1', textAlign: 'center', display: 'block' }}>
+                                <p className="testimonial-quote" style={{ fontStyle: 'normal' }}>Be the first to share your experience!</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div style={{ textAlign: 'center', marginTop: 'var(--spacing-xl)' }}>
+                        <button className="btn btn-primary" onClick={() => setIsFeedbackOpen(true)}>Leave a Review</button>
+                    </div>
+                </div>
+            </section>
+
+            <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
 
             {/* About Section */}
             <section id="about" className="about-section">

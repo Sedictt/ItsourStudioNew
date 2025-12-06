@@ -18,6 +18,15 @@ interface Booking {
     notes?: string;
 }
 
+interface Feedback {
+    id: string;
+    name: string;
+    rating: number;
+    message: string;
+    showInTestimonials: boolean;
+    createdAt?: any;
+}
+
 const AdminDashboard = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
@@ -28,6 +37,8 @@ const AdminDashboard = () => {
         revenue: 0
     });
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'bookings' | 'feedbacks'>('bookings');
+    const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
 
     // Fetch Bookings Real-time
     useEffect(() => {
@@ -57,6 +68,22 @@ const AdminDashboard = () => {
         }, (error) => {
             console.error("Error fetching bookings:", error);
             setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Fetch Feedbacks Real-time
+    useEffect(() => {
+        const q = query(collection(db, 'feedbacks'), orderBy('createdAt', 'desc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const feedbacksData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as Feedback[];
+            setFeedbacks(feedbacksData);
+        }, (error) => {
+            console.error("Error fetching feedbacks:", error);
         });
 
         return () => unsubscribe();
@@ -131,11 +158,31 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleToggleFeedback = async (id: string, currentStatus: boolean) => {
+        try {
+            await updateDoc(doc(db, 'feedbacks', id), {
+                showInTestimonials: !currentStatus
+            });
+        } catch (error) {
+            console.error("Error updating feedback:", error);
+            alert("Failed to update status");
+        }
+    };
+
+    const handleDeleteFeedback = async (id: string) => {
+        if (window.confirm("Delete this feedback?")) {
+            try {
+                await deleteDoc(doc(db, 'feedbacks', id));
+            } catch (error) {
+                console.error("Error deleting feedback:", error);
+            }
+        }
+    };
+
     if (loading) {
         return (
             <div className="loading-container">
                 <div className="spinner"></div>
-                {/* Ensure you have a spinner style or replace with text */}
                 <p>Loading Dashboard...</p>
             </div>
         );
@@ -149,121 +196,192 @@ const AdminDashboard = () => {
                         <h1 className="admin-title">Admin Dashboard</h1>
                         <p className="section-subtitle">Manage bookings and studio schedule</p>
                     </div>
-                    {/* Add Logout button here if auth is implemented */}
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button
+                            className={`btn ${activeTab === 'bookings' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setActiveTab('bookings')}
+                        >
+                            Bookings
+                        </button>
+                        <button
+                            className={`btn ${activeTab === 'feedbacks' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setActiveTab('feedbacks')}
+                        >
+                            Feedbacks
+                        </button>
+                    </div>
                 </header>
 
-                {/* Stats Cards */}
-                <div className="stats-grid">
-                    <div className="stat-card">
-                        <div className="stat-icon">📊</div>
-                        <div className="stat-info">
-                            <h4>Total Bookings</h4>
-                            <div className="stat-value">{stats.total}</div>
+                {activeTab === 'bookings' ? (
+                    <>
+                        {/* Stats Cards */}
+                        <div className="stats-grid">
+                            <div className="stat-card">
+                                <div className="stat-icon">📊</div>
+                                <div className="stat-info">
+                                    <h4>Total Bookings</h4>
+                                    <div className="stat-value">{stats.total}</div>
+                                </div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-icon">⏳</div>
+                                <div className="stat-info">
+                                    <h4>Pending Requests</h4>
+                                    <div className="stat-value">{stats.pending}</div>
+                                </div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-icon">✅</div>
+                                <div className="stat-info">
+                                    <h4>Confirmed Sessions</h4>
+                                    <div className="stat-value">{stats.confirmed}</div>
+                                </div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-icon">💰</div>
+                                <div className="stat-info">
+                                    <h4>Total Est. Revenue</h4>
+                                    <div className="stat-value">₱{stats.revenue.toLocaleString()}</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-icon">⏳</div>
-                        <div className="stat-info">
-                            <h4>Pending Requests</h4>
-                            <div className="stat-value">{stats.pending}</div>
-                        </div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-icon">✅</div>
-                        <div className="stat-info">
-                            <h4>Confirmed Sessions</h4>
-                            <div className="stat-value">{stats.confirmed}</div>
-                        </div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-icon">💰</div>
-                        <div className="stat-info">
-                            <h4>Total Est. Revenue</h4>
-                            <div className="stat-value">₱{stats.revenue.toLocaleString()}</div>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Bookings Table */}
-                <div className="bookings-section">
-                    <div className="bookings-header">
-                        <h3>Recent Bookings</h3>
-                        {/* Add Filter/Search if needed */}
-                    </div>
-                    <div className="bookings-table-container">
-                        <table className="bookings-table">
-                            <thead>
-                                <tr>
-                                    <th>Client</th>
-                                    <th>Date & Time</th>
-                                    <th>Package</th>
-                                    <th>Status</th>
-                                    <th>Total</th>
-                                    <th>Payment</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {bookings.map((booking) => (
-                                    <tr key={booking.id}>
-                                        <td>
-                                            <div style={{ fontWeight: 500 }}>{booking.fullName}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#888' }}>{booking.phone}</div>
-                                        </td>
-                                        <td>
-                                            <div>{booking.date}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#888' }}>{booking.time}</div>
-                                        </td>
-                                        <td>{booking.package}</td>
-                                        <td>
-                                            <select
-                                                value={booking.status}
-                                                onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                                                className={`status-badge status-${booking.status}`}
-                                                style={{ border: 'none', cursor: 'pointer', padding: '5px' }}
-                                            >
-                                                <option value="pending">Pending</option>
-                                                <option value="confirmed">Confirmed</option>
-                                                <option value="completed">Completed</option>
-                                                <option value="rejected">Rejected</option>
-                                            </select>
-                                        </td>
-                                        <td>₱{booking.totalPrice}</td>
-                                        <td>
-                                            {booking.paymentProofUrl ? (
-                                                <button
-                                                    className="proof-link"
-                                                    onClick={() => setSelectedImage(booking.paymentProofUrl || null)}
-                                                >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                                                    View Proof
-                                                </button>
-                                            ) : (
-                                                <span style={{ color: '#aaa', fontSize: '0.8rem' }}>No proof uploaded</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <button
-                                                className="action-btn"
-                                                title="Delete Booking"
-                                                onClick={() => handleDelete(booking.id)}
-                                            >
-                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="red" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {bookings.length === 0 && (
+                        {/* Bookings Table */}
+                        <div className="bookings-section">
+                            <div className="bookings-header">
+                                <h3>Recent Bookings</h3>
+                            </div>
+                            <div className="bookings-table-container">
+                                <table className="bookings-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Client</th>
+                                            <th>Date & Time</th>
+                                            <th>Package</th>
+                                            <th>Status</th>
+                                            <th>Total</th>
+                                            <th>Payment</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {bookings.map((booking) => (
+                                            <tr key={booking.id}>
+                                                <td>
+                                                    <div style={{ fontWeight: 500 }}>{booking.fullName}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: '#888' }}>{booking.phone}</div>
+                                                </td>
+                                                <td>
+                                                    <div>{booking.date}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: '#888' }}>{booking.time}</div>
+                                                </td>
+                                                <td>{booking.package}</td>
+                                                <td>
+                                                    <select
+                                                        value={booking.status}
+                                                        onChange={(e) => handleStatusChange(booking.id, e.target.value)}
+                                                        className={`status-badge status-${booking.status}`}
+                                                        style={{ border: 'none', cursor: 'pointer', padding: '5px' }}
+                                                    >
+                                                        <option value="pending">Pending</option>
+                                                        <option value="confirmed">Confirmed</option>
+                                                        <option value="completed">Completed</option>
+                                                        <option value="rejected">Rejected</option>
+                                                    </select>
+                                                </td>
+                                                <td>₱{booking.totalPrice}</td>
+                                                <td>
+                                                    {booking.paymentProofUrl ? (
+                                                        <button
+                                                            className="proof-link"
+                                                            onClick={() => setSelectedImage(booking.paymentProofUrl || null)}
+                                                        >
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                                            View Proof
+                                                        </button>
+                                                    ) : (
+                                                        <span style={{ color: '#aaa', fontSize: '0.8rem' }}>No proof uploaded</span>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    <button
+                                                        className="action-btn"
+                                                        title="Delete Booking"
+                                                        onClick={() => handleDelete(booking.id)}
+                                                    >
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="red" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {bookings.length === 0 && (
+                                            <tr>
+                                                <td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
+                                                    No bookings found.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="bookings-section">
+                        <div className="bookings-header">
+                            <h3>Customer Feedbacks</h3>
+                        </div>
+                        <div className="bookings-table-container">
+                            <table className="bookings-table">
+                                <thead>
                                     <tr>
-                                        <td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
-                                            No bookings found.
-                                        </td>
+                                        <th>Date</th>
+                                        <th>Customer</th>
+                                        <th>Rating</th>
+                                        <th>Message</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {feedbacks.map((feedback) => (
+                                        <tr key={feedback.id}>
+                                            <td>{feedback.createdAt?.toDate ? feedback.createdAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                                            <td style={{ fontWeight: 500 }}>{feedback.name}</td>
+                                            <td style={{ color: '#FFD700' }}>{'★'.repeat(feedback.rating)}</td>
+                                            <td style={{ maxWidth: '300px' }}>{feedback.message}</td>
+                                            <td>
+                                                <button
+                                                    className={`btn ${feedback.showInTestimonials ? 'btn-primary' : 'btn-outline'}`}
+                                                    style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                                                    onClick={() => handleToggleFeedback(feedback.id, feedback.showInTestimonials)}
+                                                >
+                                                    {feedback.showInTestimonials ? 'Published' : 'Hidden'}
+                                                </button>
+                                            </td>
+                                            <td>
+                                                <button
+                                                    className="action-btn"
+                                                    title="Delete"
+                                                    onClick={() => handleDeleteFeedback(feedback.id)}
+                                                >
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="red" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {feedbacks.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                                                No feedbacks found.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Image Preview Modal */}

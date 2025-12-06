@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc } from 'firebase/firestore';
 import './Admin.css';
 
 interface Booking {
@@ -28,6 +28,22 @@ interface Feedback {
     createdAt?: any;
 }
 
+interface SiteContent {
+    about: {
+        title: string;
+        description1: string;
+        description2: string;
+        imageUrl: string;
+    };
+    footer: {
+        brandText: string;
+        email: string;
+        facebook: string;
+        instagram: string;
+        pinterest: string;
+    };
+}
+
 interface Toast {
     id: number;
     type: 'success' | 'error';
@@ -49,8 +65,25 @@ const AdminDashboard = () => {
         revenue: 0
     });
 
+    // Content State
+    const [content, setContent] = useState<SiteContent>({
+        about: {
+            title: "About it's ouR Studio",
+            description1: "Welcome to it's ouR Studio, where you're in complete control of your photography experience.",
+            description2: "Equipped with professional lighting, multiple backdrops, and an intuitive remote control system.",
+            imageUrl: "/about-studio.jpg"
+        },
+        footer: {
+            brandText: "Empowering you to capture your authentic self",
+            email: "hello@studiolens.com",
+            facebook: "#",
+            instagram: "#",
+            pinterest: "#"
+        }
+    });
+
     // UI States
-    const [activeTab, setActiveTab] = useState<'bookings' | 'feedbacks'>('bookings');
+    const [activeTab, setActiveTab] = useState<'bookings' | 'feedbacks' | 'content'>('bookings');
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -121,6 +154,26 @@ const AdminDashboard = () => {
         });
 
         return () => unsubscribe();
+    }, []);
+
+    // Fetch Site Content
+    useEffect(() => {
+        const fetchContent = async () => {
+            try {
+                const aboutDoc = await getDoc(doc(db, 'siteContent', 'about'));
+                const footerDoc = await getDoc(doc(db, 'siteContent', 'footer'));
+
+                if (aboutDoc.exists()) {
+                    setContent(prev => ({ ...prev, about: aboutDoc.data() as any }));
+                }
+                if (footerDoc.exists()) {
+                    setContent(prev => ({ ...prev, footer: footerDoc.data() as any }));
+                }
+            } catch (err) {
+                console.log("No content found, using defaults");
+            }
+        };
+        fetchContent();
     }, []);
 
     // Processing Bookings (Search, Filter, Sort)
@@ -255,6 +308,26 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleSaveContent = async (section: 'about' | 'footer') => {
+        try {
+            await setDoc(doc(db, 'siteContent', section), content[section]);
+            showToast('success', 'Saved', `${section.charAt(0).toUpperCase() + section.slice(1)} content updated successfully.`);
+        } catch (error) {
+            console.error("Error saving content:", error);
+            showToast('error', 'Error', 'Failed to save content.');
+        }
+    };
+
+    const handleContentChange = (section: 'about' | 'footer', field: string, value: string) => {
+        setContent(prev => ({
+            ...prev,
+            [section]: {
+                ...prev[section],
+                [field]: value
+            }
+        }));
+    };
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -285,10 +358,16 @@ const AdminDashboard = () => {
                         >
                             Feedbacks
                         </button>
+                        <button
+                            className={`btn ${activeTab === 'content' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setActiveTab('content')}
+                        >
+                            Content
+                        </button>
                     </div>
                 </header>
 
-                {activeTab === 'bookings' ? (
+                {activeTab === 'bookings' && (
                     <>
                         {/* Stats Cards */}
                         <div className="stats-grid">
@@ -329,7 +408,6 @@ const AdminDashboard = () => {
                                 </div>
                             </div>
                         </div>
-
 
                         {/* Bookings Table */}
                         <div className="bookings-section">
@@ -491,7 +569,9 @@ const AdminDashboard = () => {
                             )}
                         </div>
                     </>
-                ) : (
+                )}
+
+                {activeTab === 'feedbacks' && (
                     <div className="bookings-section">
                         <div className="bookings-header">
                             <h3>Customer Feedbacks</h3>
@@ -544,6 +624,124 @@ const AdminDashboard = () => {
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'content' && (
+                    <div className="bookings-section">
+                        <div className="bookings-header">
+                            <h3>Content Management</h3>
+                        </div>
+                        <div style={{ padding: '2rem' }}>
+                            {/* About Section Edit */}
+                            <div className="content-group" style={{ marginBottom: '3rem' }}>
+                                <h4 style={{ marginBottom: '1.5rem', borderBottom: '2px solid #eee', paddingBottom: '0.5rem' }}>About Section</h4>
+                                <div style={{ display: 'grid', gap: '1.5rem' }}>
+                                    <div>
+                                        <label className="form-label">Section Title</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={content.about.title}
+                                            onChange={(e) => handleContentChange('about', 'title', e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Image URL</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={content.about.imageUrl}
+                                            onChange={(e) => handleContentChange('about', 'imageUrl', e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Description Paragraph 1</label>
+                                        <textarea
+                                            className="form-input"
+                                            rows={4}
+                                            value={content.about.description1}
+                                            onChange={(e) => handleContentChange('about', 'description1', e.target.value)}
+                                        ></textarea>
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Description Paragraph 2</label>
+                                        <textarea
+                                            className="form-input"
+                                            rows={4}
+                                            value={content.about.description2}
+                                            onChange={(e) => handleContentChange('about', 'description2', e.target.value)}
+                                        ></textarea>
+                                    </div>
+                                    <button
+                                        className="btn btn-primary"
+                                        style={{ width: 'fit-content' }}
+                                        onClick={() => handleSaveContent('about')}
+                                    >
+                                        Save About Section
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Footer Section Edit */}
+                            <div className="content-group">
+                                <h4 style={{ marginBottom: '1.5rem', borderBottom: '2px solid #eee', paddingBottom: '0.5rem' }}>Footer Information</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <label className="form-label">Brand Slogan</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={content.footer.brandText}
+                                            onChange={(e) => handleContentChange('footer', 'brandText', e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Contact Email</label>
+                                        <input
+                                            type="email"
+                                            className="form-input"
+                                            value={content.footer.email}
+                                            onChange={(e) => handleContentChange('footer', 'email', e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Facebook URL</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={content.footer.facebook}
+                                            onChange={(e) => handleContentChange('footer', 'facebook', e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Instagram URL</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={content.footer.instagram}
+                                            onChange={(e) => handleContentChange('footer', 'instagram', e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Pinterest URL</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={content.footer.pinterest}
+                                            onChange={(e) => handleContentChange('footer', 'pinterest', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    className="btn btn-primary"
+                                    style={{ marginTop: '1.5rem' }}
+                                    onClick={() => handleSaveContent('footer')}
+                                >
+                                    Save Footer Info
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

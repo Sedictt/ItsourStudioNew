@@ -1,8 +1,40 @@
-
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
+interface FooterContent {
+    brandText: string;
+    email: string;
+    facebook: string;
+    instagram: string;
+    pinterest: string;
+}
 
 const Footer = () => {
     const currentYear = new Date().getFullYear();
+    const [footerContent, setFooterContent] = useState<FooterContent>({
+        brandText: "Empowering you to capture your authentic self",
+        email: "hello@studiolens.com",
+        facebook: "#",
+        instagram: "#",
+        pinterest: "#"
+    });
+
+    useEffect(() => {
+        const fetchFooter = async () => {
+            try {
+                const docRef = doc(db, 'siteContent', 'footer');
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setFooterContent(docSnap.data() as FooterContent);
+                }
+            } catch (err) {
+                console.error("Error fetching footer content:", err);
+            }
+        };
+        fetchFooter();
+    }, []);
 
     return (
         <footer className="footer">
@@ -12,7 +44,7 @@ const Footer = () => {
                         <div className="logo">
                             <img src="/logo/LOGO_var1.png" alt="it's ouR Studio Logo" className="logo-image" />
                         </div>
-                        <p>Empowering you to capture your authentic self</p>
+                        <p>{footerContent.brandText}</p>
                     </div>
                     <div className="footer-links">
                         <div className="footer-column">
@@ -31,10 +63,10 @@ const Footer = () => {
                         </div>
                         <div className="footer-column">
                             <h4>Connect</h4>
-                            <a href="#">Instagram</a>
-                            <a href="#">Facebook</a>
-                            <a href="#">Pinterest</a>
-                            <a href="mailto:hello@studiolens.com">Email Us</a>
+                            <a href={footerContent.instagram} target="_blank" rel="noopener noreferrer">Instagram</a>
+                            <a href={footerContent.facebook} target="_blank" rel="noopener noreferrer">Facebook</a>
+                            <a href={footerContent.pinterest} target="_blank" rel="noopener noreferrer">Pinterest</a>
+                            <a href={`mailto:${footerContent.email}`}>Email Us</a>
                         </div>
                     </div>
                 </div>

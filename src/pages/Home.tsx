@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import BookingSection from '../components/BookingSection';
+import { useBooking } from '../context/BookingContext';
 
 const Home = () => {
+    const { openBooking } = useBooking();
+
     useEffect(() => {
         // Scroll to top on mount
         window.scrollTo(0, 0);
@@ -29,7 +31,7 @@ const Home = () => {
                     <p className="hero-description">Capture your authentic self in our premium self-photography studio</p>
                     <div className="hero-buttons">
                         <Link to="/gallery" className="btn btn-primary btn-large">View Gallery</Link>
-                        <a href="#booking" className="btn btn-secondary btn-large">Book Session</a>
+                        <button className="btn btn-secondary btn-large" onClick={() => openBooking()}>Book Session</button>
                     </div>
                 </div>
                 <div className="scroll-indicator">
@@ -120,7 +122,7 @@ const Home = () => {
                                 <li>10 Raw soft copies</li>
                                 <li>1 4R print</li>
                             </ul>
-                            <a href="#booking" className="btn btn-outline">Book Now</a>
+                            <button className="btn btn-outline" onClick={() => openBooking('solo')}>Book Now</button>
                         </div>
 
                         {/* Basic Package (Best Selling) */}
@@ -139,7 +141,7 @@ const Home = () => {
                                 <li>2 strips print</li>
                                 <li>Free use of props & wardrobe</li>
                             </ul>
-                            <a href="#booking" className="btn btn-secondary">Book Now</a>
+                            <button className="btn btn-secondary" onClick={() => openBooking('basic')}>Book Now</button>
                         </div>
 
                         {/* Barkada Package */}
@@ -152,12 +154,12 @@ const Home = () => {
                             <ul className="service-features">
                                 <li>Up to 8 People</li>
                                 <li>30 min shoot + 20 min selection</li>
-                                <li>Unlimited background selection</li>
+                                <li>1 Background selection</li>
                                 <li>Soft copies of all raw photos</li>
                                 <li>8 strips print</li>
                                 <li>2 A5 prints & 2 4R prints</li>
                             </ul>
-                            <a href="#booking" className="btn btn-outline">Book Now</a>
+                            <button className="btn btn-outline" onClick={() => openBooking('barkada')}>Book Now</button>
                         </div>
                     </div>
 
@@ -216,9 +218,6 @@ const Home = () => {
                     </div>
                 </div>
             </section>
-
-            {/* Booking Section */}
-            <BookingSection />
         </>
     );
 };

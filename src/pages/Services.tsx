@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+
 
 const services = [
     {
@@ -135,7 +135,10 @@ const services = [
     }
 ];
 
+import { useBooking } from '../context/BookingContext';
+
 const Services = () => {
+    const { openBooking } = useBooking();
     const [isDragging, setIsDragging] = useState(false);
     const [sliderValue, setSliderValue] = useState(0);
     const sliderRef = useRef<HTMLDivElement>(null);
@@ -274,13 +277,12 @@ const Services = () => {
                                 ))}
                             </ul>
 
-                            <Link
-                                to="/#booking"
-                                state={{ packageId: service.id }}
+                            <button
+                                onClick={() => openBooking(service.id)}
                                 className="btn btn-primary btn-large"
                             >
                                 Book This Package
-                            </Link>
+                            </button>
                         </div>
 
                         <div className="service-showcase">

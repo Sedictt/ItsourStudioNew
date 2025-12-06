@@ -1702,3 +1702,125 @@ textarea:focus {
         transform: translateY(-3px);
     }
 }
+
+/* Step 2: Improved Details Form */
+.details-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.form-row-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-dark);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 1rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    transition: color 0.2s;
+}
+
+.input-icon.top-aligned {
+    align-items: flex-start;
+    top: 1rem;
+}
+
+.input-wrapper input,
+.input-wrapper textarea {
+    width: 100%;
+    padding: 1rem 1rem 1rem 3rem;
+    /* Left padding for icon */
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 1rem;
+    color: var(--color-dark);
+    transition: all 0.2s;
+    background: white;
+}
+
+.input-wrapper input:focus,
+.input-wrapper textarea:focus {
+    border-color: var(--color-terracotta);
+    box-shadow: 0 0 0 4px rgba(191, 106, 57, 0.1);
+}
+
+.input-wrapper:focus-within .input-icon {
+    color: var(--color-terracotta);
+}
+
+
+/* Updated Mini Summary */
+.booking-summary-mini.updated {
+    background: #fffcf8;
+    border: 1px solid rgba(191, 106, 57, 0.2);
+    border-radius: 16px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.mini-header {
+    background: rgba(191, 106, 57, 0.1);
+    padding: 0.75rem 1.5rem;
+    font-weight: 700;
+    color: var(--color-terracotta);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid rgba(191, 106, 57, 0.1);
+}
+
+.mini-content {
+    padding: 1rem 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.mini-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.mini-item .label {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.mini-item .value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-dark);
+}
+
+.mini-item.highlight .value {
+    color: var(--color-terracotta);
+    font-weight: 700;
+    font-size: 1.1rem;
+}

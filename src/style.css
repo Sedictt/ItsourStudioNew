@@ -428,7 +428,7 @@ p {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--gradient-overlay), url('/hero-bg.jpg') center/cover;
+  background: var(--gradient-overlay), url('/about-studio.jpg') center/cover;
   animation: kenBurns 20s ease-in-out infinite alternate;
 }
 
@@ -2443,6 +2443,7 @@ section {
   /* Compensate for border to keep content area 90svh */
   box-sizing: border-box;
 }
+
 /* ===================================
    BOOKING FLOW ENHANCEMENTS
    =================================== */
@@ -2560,7 +2561,8 @@ section {
 .gcash-number {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #007bff; /* GCash Blue-ish */
+  color: #007bff;
+  /* GCash Blue-ish */
   letter-spacing: 1px;
 }
 
@@ -2674,4 +2676,3 @@ section {
 .dot.booked {
   background: #adb5bd;
 }
-

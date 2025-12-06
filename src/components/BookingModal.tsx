@@ -148,13 +148,22 @@ const BookingModal = () => {
         fetchBookings();
     }, [formData.date]);
 
+    // Phone formatter
+    const formatPhoneNumber = (value: string) => {
+        const cleaned = value.replace(/\D/g, '');
+        if (cleaned.length === 0) return '';
+        if (cleaned.length <= 4) return cleaned;
+        if (cleaned.length <= 7) return `${cleaned.slice(0, 4)} ${cleaned.slice(4)}`;
+        return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 11)}`;
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
 
         if (name === 'phone') {
-            const re = /^[0-9\b]+$/;
-            if (value === '' || (re.test(value) && value.length <= 11)) {
-                setFormData(prev => ({ ...prev, [name]: value }));
+            const formatted = formatPhoneNumber(value);
+            if (formatted.length <= 13) { // 09XX XXX XXXX is 13 chars
+                setFormData(prev => ({ ...prev, [name]: formatted }));
             }
         } else {
             setFormData(prev => ({
@@ -168,18 +177,46 @@ const BookingModal = () => {
         setFormData(prev => ({ ...prev, time }));
     };
 
+    // Drag and Drop Logic
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            handleFileProcess(files[0]);
+        }
+    };
+
+    const handleFileProcess = (file: File) => {
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('File size exceeds 10MB limit', 'error');
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            showToast('Please upload an image file', 'error');
+            return;
+        }
+
+        setPaymentFile(file);
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            if (file.size > 10 * 1024 * 1024) {
-                showToast('File size exceeds 10MB limit', 'error');
-                return;
-            }
-            setPaymentFile(file);
-
-            // Create preview URL
-            const url = URL.createObjectURL(file);
-            setPreviewUrl(url);
+            handleFileProcess(e.target.files[0]);
         }
     };
 
@@ -197,6 +234,97 @@ const BookingModal = () => {
             if (previewUrl) URL.revokeObjectURL(previewUrl);
         };
     }, [previewUrl]);
+
+    // Custom Calendar Logic
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+
+    const getDaysInMonth = (date: Date) => {
+        return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    };
+
+    const getFirstDayOfMonth = (date: Date) => {
+        return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    };
+
+    const handlePrevMonth = () => {
+        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+    };
+
+    const handleNextMonth = () => {
+        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+    };
+
+    const isDateDisabled = (day: number) => {
+        const dateToCheck = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return dateToCheck < today;
+    };
+
+    const handleDateClick = (day: number) => {
+        if (isDateDisabled(day)) return;
+        const selectedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+        // Format as YYYY-MM-DD
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const dateDay = String(selectedDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${dateDay}`;
+
+        setFormData(prev => ({ ...prev, date: dateString }));
+    };
+
+    const renderCalendar = () => {
+        const daysInMonth = getDaysInMonth(currentMonth);
+        const firstDay = getFirstDayOfMonth(currentMonth);
+        const days = [];
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        // Empty slots for previous month
+        for (let i = 0; i < firstDay; i++) {
+            days.push(<div key={`empty-${i}`} className="calendar-day empty"></div>);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateToCheck = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+            const year = dateToCheck.getFullYear();
+            const month = String(dateToCheck.getMonth() + 1).padStart(2, '0');
+            const dateDay = String(dateToCheck.getDate()).padStart(2, '0');
+            const dateString = `${year}-${month}-${dateDay}`;
+
+            const isSelected = formData.date === dateString;
+            const isDisabled = isDateDisabled(day);
+
+            days.push(
+                <div
+                    key={day}
+                    className={`calendar-day ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+                    onClick={() => handleDateClick(day)}
+                >
+                    {day}
+                </div>
+            );
+        }
+
+        return (
+            <div className="custom-calendar">
+                <div className="calendar-header">
+                    <button type="button" onClick={handlePrevMonth}>&lt;</button>
+                    <span>{monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}</span>
+                    <button type="button" onClick={handleNextMonth}>&gt;</button>
+                </div>
+                <div className="calendar-grid">
+                    <div className="calendar-weekday">Sun</div>
+                    <div className="calendar-weekday">Mon</div>
+                    <div className="calendar-weekday">Tue</div>
+                    <div className="calendar-weekday">Wed</div>
+                    <div className="calendar-weekday">Thu</div>
+                    <div className="calendar-weekday">Fri</div>
+                    <div className="calendar-weekday">Sat</div>
+                    {days}
+                </div>
+            </div>
+        );
+    };
 
     const generateTimeSlots = (dateString: string) => {
         if (!dateString) return [];
@@ -232,6 +360,31 @@ const BookingModal = () => {
     const durationTotal = (selectedPackage ? selectedPackage.duration : 0) + formData.extensionDuration;
 
     const isSlotAvailable = (timeStr: string) => {
+        // Check if past time (UTC+8)
+        if (formData.date) {
+            const now = new Date();
+            const phFormatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Manila',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            const phDateString = phFormatter.format(now);
+
+            if (formData.date < phDateString) return false;
+
+            if (formData.date === phDateString) {
+                const phTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+                    timeZone: 'Asia/Manila',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+                const phTimeStr = phTimeFormatter.format(now);
+                if (timeStr < phTimeStr) return false;
+            }
+        }
+
         if (!selectedPackage) return true;
 
         const proposedStart = timeToMinutes(timeStr);
@@ -269,7 +422,7 @@ const BookingModal = () => {
                 showToast("Please fill in all required contact details.", 'error');
                 return;
             }
-            if (!formData.phone.startsWith('09') || formData.phone.length !== 11) {
+            if (!formData.phone.startsWith('09') || formData.phone.length !== 13) {
                 showToast("Please enter a valid PH phone number (starts with 09, 11 digits).", 'error');
                 return;
             }
@@ -370,8 +523,6 @@ const BookingModal = () => {
         }
     };
 
-    const today = new Date().toISOString().split('T')[0];
-
     if (!isBookingOpen) return null;
 
     return (
@@ -471,22 +622,31 @@ const BookingModal = () => {
 
                                     <div className="date-time-container">
                                         <div className="form-group date-group">
-                                            <label htmlFor="date">Select Date</label>
-                                            <div className="date-input-wrapper">
-                                                <input type="date" id="date" name="date" value={formData.date} onChange={handleChange} required min={today} />
-                                                <span className="calendar-icon">📅</span>
-                                            </div>
+                                            <label>Select Date</label>
+                                            {renderCalendar()}
                                         </div>
 
                                         <div className="form-group extension-group">
-                                            <label htmlFor="extensionDuration">Add Extra Time?</label>
-                                            <select id="extensionDuration" name="extensionDuration" value={formData.extensionDuration} onChange={handleChange} className="modern-select">
-                                                <option value="0">No extension</option>
-                                                <option value="15">+15 mins (₱150)</option>
-                                                <option value="30">+30 mins (₱300)</option>
-                                                <option value="45">+45 mins (₱450)</option>
-                                                <option value="60">+60 mins (₱600)</option>
-                                            </select>
+                                            <label>Add Extra Time?</label>
+                                            <div className="extension-options-grid">
+                                                {Object.entries(EXTENSION_RATES).map(([duration, price]) => {
+                                                    const dur = parseInt(duration);
+                                                    const isSelected = formData.extensionDuration === dur;
+                                                    return (
+                                                        <div
+                                                            key={duration}
+                                                            className={`extension-card ${isSelected ? 'selected' : ''}`}
+                                                            onClick={() => setFormData(prev => ({ ...prev, extensionDuration: dur }))}
+                                                        >
+                                                            <div className="extension-main">
+                                                                <span className="ext-icon">{dur === 0 ? '🚫' : '⚡'}</span>
+                                                                <span className="ext-label">{dur === 0 ? 'No Extension' : `+${dur} mins`}</span>
+                                                            </div>
+                                                            {dur > 0 && <span className="ext-price">₱{price}</span>}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -649,14 +809,20 @@ const BookingModal = () => {
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <div className="upload-dropzone">
+                                                    <div
+                                                        className={`upload-dropzone ${isDragging ? 'drag-over' : ''}`}
+                                                        onDragOver={handleDragOver}
+                                                        onDragLeave={handleDragLeave}
+                                                        onDrop={handleDrop}
+                                                    >
                                                         <input type="file" id="paymentProof" name="paymentProof" accept="image/*" onChange={handleFileChange} required />
                                                         <div className="dropzone-content">
                                                             <div className="upload-prompt">
                                                                 <div className="icon-upload">
                                                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                                                                 </div>
-                                                                <span>Upload Screenshot</span>
+                                                                <span>{isDragging ? 'Drop Image Here' : 'Upload Screenshot'}</span>
+                                                                <span className="drop-subtext">or drag and drop</span>
                                                             </div>
                                                         </div>
                                                     </div>

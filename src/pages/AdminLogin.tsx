@@ -20,22 +20,23 @@ const AdminLogin = () => {
 
     return (
         <div className="admin-dashboard" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', paddingTop: 0 }}>
-            <div className="section-header" style={{ width: '100%', maxWidth: '400px', backgroundColor: 'white', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-                <h2 className="section-title">Admin Access</h2>
-                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
-                    <div style={{ textAlign: 'left' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Password</label>
+            <div className="admin-login-card">
+                <h2 className="admin-title" style={{ fontSize: '2rem' }}>Admin Access</h2>
+                <form onSubmit={handleLogin} className="login-form">
+                    <div className="form-group">
+                        <label className="form-label">Password</label>
                         <input
                             type="password"
-                            className="input-field"
+                            className="form-input"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px' }}
                             placeholder="Enter admin password"
                         />
                     </div>
-                    {error && <div style={{ color: 'red', fontSize: '0.9rem' }}>{error}</div>}
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Login</button>
+                    {error && <div style={{ color: '#c62828', fontSize: '0.9rem', textAlign: 'left' }}>{error}</div>}
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>
+                        Login to Dashboard
+                    </button>
                 </form>
             </div>
         </div>

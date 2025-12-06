@@ -16,6 +16,7 @@ interface Booking {
     paymentProofUrl?: string;
     createdAt?: any;
     notes?: string;
+    [key: string]: any; // Allow indexing
 }
 
 interface Feedback {
@@ -27,8 +28,19 @@ interface Feedback {
     createdAt?: any;
 }
 
+interface Toast {
+    id: number;
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+}
+
+const ITEMS_PER_PAGE = 10;
+
 const AdminDashboard = () => {
+    // Data States
     const [bookings, setBookings] = useState<Booking[]>([]);
+    const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         total: 0,
@@ -36,9 +48,29 @@ const AdminDashboard = () => {
         confirmed: 0,
         revenue: 0
     });
-    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+    // UI States
     const [activeTab, setActiveTab] = useState<'bookings' | 'feedbacks'>('bookings');
-    const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [toasts, setToasts] = useState<Toast[]>([]);
+
+    // Filter/Sort/Pagination States
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+
+    // Toast Helper
+    const showToast = (type: 'success' | 'error', title: string, message: string) => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, type, title, message }]);
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
+    };
+
+    // remove toast manually
+    const removeToast = (id: number) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    };
 
     // Fetch Bookings Real-time
     useEffect(() => {
@@ -67,6 +99,7 @@ const AdminDashboard = () => {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching bookings:", error);
+            showToast('error', 'Error', 'Failed to fetch bookings data');
             setLoading(false);
         });
 
@@ -84,10 +117,47 @@ const AdminDashboard = () => {
             setFeedbacks(feedbacksData);
         }, (error) => {
             console.error("Error fetching feedbacks:", error);
+            showToast('error', 'Error', 'Failed to fetch feedback data');
         });
 
         return () => unsubscribe();
     }, []);
+
+    // Processing Bookings (Search, Filter, Sort)
+    const processedBookings = bookings.filter(booking => {
+        const term = searchTerm.toLowerCase();
+        const matchesSearch = booking.fullName.toLowerCase().includes(term) ||
+            booking.email.toLowerCase().includes(term) ||
+            booking.id.toLowerCase().includes(term);
+        const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    }).sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    // Pagination Logic
+    const totalPages = Math.ceil(processedBookings.length / ITEMS_PER_PAGE);
+    const paginatedBookings = processedBookings.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
+
+    const handleSort = (key: string) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
 
     const sendEmailNotification = async (booking: Booking, status: string, reason?: string) => {
         const emailType = status === 'confirmed' ? 'confirmed' : status === 'rejected' ? 'rejected' : null;
@@ -112,11 +182,11 @@ const AdminDashboard = () => {
                     }
                 })
             });
-            // Show success toast or log
             console.log(`Email sent for status: ${status}`);
+            showToast('success', 'Email Sent', `Notification sent to ${booking.email}`);
         } catch (error) {
             console.error("Failed to send email notification", error);
-            alert("Status updated but failed to send email notification.");
+            showToast('error', 'Email Failed', 'Status updated but failed to send email.');
         }
     };
 
@@ -135,6 +205,8 @@ const AdminDashboard = () => {
                 rejectionReason: reason || null
             });
 
+            showToast('success', 'Status Updated', `Booking marked as ${newStatus}`);
+
             // Find the booking object to send email
             const booking = bookings.find(b => b.id === id);
             if (booking && (newStatus === 'confirmed' || newStatus === 'rejected')) {
@@ -143,7 +215,7 @@ const AdminDashboard = () => {
 
         } catch (error) {
             console.error("Error updating status:", error);
-            alert("Failed to update status");
+            showToast('error', 'Update Failed', 'Failed to update booking status');
         }
     };
 
@@ -151,9 +223,10 @@ const AdminDashboard = () => {
         if (window.confirm("Are you sure you want to delete this booking? This action cannot be undone.")) {
             try {
                 await deleteDoc(doc(db, 'bookings', id));
+                showToast('success', 'Deleted', 'Booking deleted successfully');
             } catch (error) {
                 console.error("Error deleting booking:", error);
-                alert("Failed to delete booking");
+                showToast('error', 'Delete Failed', 'Failed to delete booking');
             }
         }
     };
@@ -163,9 +236,10 @@ const AdminDashboard = () => {
             await updateDoc(doc(db, 'feedbacks', id), {
                 showInTestimonials: !currentStatus
             });
+            showToast('success', 'Updated', `Feedback ${!currentStatus ? 'published' : 'hidden'}`);
         } catch (error) {
             console.error("Error updating feedback:", error);
-            alert("Failed to update status");
+            showToast('error', 'Error', 'Failed to update feedback status');
         }
     };
 
@@ -173,8 +247,10 @@ const AdminDashboard = () => {
         if (window.confirm("Delete this feedback?")) {
             try {
                 await deleteDoc(doc(db, 'feedbacks', id));
+                showToast('success', 'Deleted', 'Feedback deleted successfully');
             } catch (error) {
                 console.error("Error deleting feedback:", error);
+                showToast('error', 'Error', 'Failed to delete feedback');
             }
         }
     };
@@ -194,7 +270,7 @@ const AdminDashboard = () => {
                 <header className="admin-header">
                     <div>
                         <h1 className="admin-title">Admin Dashboard</h1>
-                        <p className="section-subtitle">Manage bookings and studio schedule</p>
+                        <p className="admin-subtitle">Manage bookings and studio schedule</p>
                     </div>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <button
@@ -217,28 +293,36 @@ const AdminDashboard = () => {
                         {/* Stats Cards */}
                         <div className="stats-grid">
                             <div className="stat-card">
-                                <div className="stat-icon">📊</div>
+                                <div className="stat-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                </div>
                                 <div className="stat-info">
                                     <h4>Total Bookings</h4>
                                     <div className="stat-value">{stats.total}</div>
                                 </div>
                             </div>
                             <div className="stat-card">
-                                <div className="stat-icon">⏳</div>
+                                <div className="stat-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                </div>
                                 <div className="stat-info">
                                     <h4>Pending Requests</h4>
                                     <div className="stat-value">{stats.pending}</div>
                                 </div>
                             </div>
                             <div className="stat-card">
-                                <div className="stat-icon">✅</div>
+                                <div className="stat-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                </div>
                                 <div className="stat-info">
                                     <h4>Confirmed Sessions</h4>
                                     <div className="stat-value">{stats.confirmed}</div>
                                 </div>
                             </div>
                             <div className="stat-card">
-                                <div className="stat-icon">💰</div>
+                                <div className="stat-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                                </div>
                                 <div className="stat-info">
                                     <h4>Total Est. Revenue</h4>
                                     <div className="stat-value">₱{stats.revenue.toLocaleString()}</div>
@@ -246,29 +330,84 @@ const AdminDashboard = () => {
                             </div>
                         </div>
 
+
                         {/* Bookings Table */}
                         <div className="bookings-section">
                             <div className="bookings-header">
                                 <h3>Recent Bookings</h3>
                             </div>
+
+                            {/* Toolbar: Search and Filter */}
+                            <div className="dashboard-controls" style={{ padding: '0 2rem', marginTop: '1.5rem' }}>
+                                <div className="search-wrapper">
+                                    <svg className="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    <input
+                                        type="text"
+                                        placeholder="Search by name, email..."
+                                        className="search-input"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <select
+                                        className="filter-select"
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value)}
+                                    >
+                                        <option value="all">All Status</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="confirmed">Confirmed</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="rejected">Rejected</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div className="bookings-table-container">
                                 <table className="bookings-table">
                                     <thead>
                                         <tr>
-                                            <th>Client</th>
-                                            <th>Date & Time</th>
-                                            <th>Package</th>
-                                            <th>Status</th>
-                                            <th>Total</th>
+                                            <th onClick={() => handleSort('fullName')} className={`sort-header ${sortConfig.key === 'fullName' ? 'active' : ''}`}>
+                                                Client
+                                                <span className="sort-indicator">
+                                                    {sortConfig.key === 'fullName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                </span>
+                                            </th>
+                                            <th onClick={() => handleSort('date')} className={`sort-header ${sortConfig.key === 'date' ? 'active' : ''}`}>
+                                                Date & Time
+                                                <span className="sort-indicator">
+                                                    {sortConfig.key === 'date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                </span>
+                                            </th>
+                                            <th onClick={() => handleSort('package')} className={`sort-header ${sortConfig.key === 'package' ? 'active' : ''}`}>
+                                                Package
+                                                <span className="sort-indicator">
+                                                    {sortConfig.key === 'package' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                </span>
+                                            </th>
+                                            <th onClick={() => handleSort('status')} className={`sort-header ${sortConfig.key === 'status' ? 'active' : ''}`}>
+                                                Status
+                                                <span className="sort-indicator">
+                                                    {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                </span>
+                                            </th>
+                                            <th onClick={() => handleSort('totalPrice')} className={`sort-header ${sortConfig.key === 'totalPrice' ? 'active' : ''}`}>
+                                                Total
+                                                <span className="sort-indicator">
+                                                    {sortConfig.key === 'totalPrice' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                </span>
+                                            </th>
                                             <th>Payment</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {bookings.map((booking) => (
+                                        {paginatedBookings.map((booking) => (
                                             <tr key={booking.id}>
                                                 <td>
                                                     <div style={{ fontWeight: 500 }}>{booking.fullName}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: '#888' }}>{booking.email}</div>
                                                     <div style={{ fontSize: '0.8rem', color: '#888' }}>{booking.phone}</div>
                                                 </td>
                                                 <td>
@@ -281,7 +420,6 @@ const AdminDashboard = () => {
                                                         value={booking.status}
                                                         onChange={(e) => handleStatusChange(booking.id, e.target.value)}
                                                         className={`status-badge status-${booking.status}`}
-                                                        style={{ border: 'none', cursor: 'pointer', padding: '5px' }}
                                                     >
                                                         <option value="pending">Pending</option>
                                                         <option value="confirmed">Confirmed</option>
@@ -289,7 +427,7 @@ const AdminDashboard = () => {
                                                         <option value="rejected">Rejected</option>
                                                     </select>
                                                 </td>
-                                                <td>₱{booking.totalPrice}</td>
+                                                <td>₱{booking.totalPrice?.toLocaleString()}</td>
                                                 <td>
                                                     {booking.paymentProofUrl ? (
                                                         <button
@@ -314,16 +452,43 @@ const AdminDashboard = () => {
                                                 </td>
                                             </tr>
                                         ))}
-                                        {bookings.length === 0 && (
+                                        {processedBookings.length === 0 && (
                                             <tr>
-                                                <td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
-                                                    No bookings found.
+                                                <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: '#888' }}>
+                                                    {searchTerm || statusFilter !== 'all' ? 'No bookings match filters' : 'No bookings found.'}
                                                 </td>
                                             </tr>
                                         )}
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* Pagination */}
+                            {processedBookings.length > 0 && (
+                                <div className="pagination-controls">
+                                    <div className="page-info">
+                                        Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, processedBookings.length)} of {processedBookings.length} entries
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button
+                                            className="pagination-btn"
+                                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                            disabled={currentPage === 1}
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                            Previous
+                                        </button>
+                                        <button
+                                            className="pagination-btn"
+                                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            Next
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </>
                 ) : (
@@ -390,6 +555,26 @@ const AdminDashboard = () => {
                     <button className="close-modal-btn" onClick={() => setSelectedImage(null)}>&times;</button>
                     {selectedImage && <img src={selectedImage} alt="Payment Proof" />}
                 </div>
+            </div>
+
+            {/* Toast Notifications */}
+            <div className="toast-container">
+                {toasts.map(toast => (
+                    <div key={toast.id} className={`toast toast-${toast.type}`} onClick={() => removeToast(toast.id)}>
+                        <div className="toast-icon">
+                            {toast.type === 'success' ? (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            ) : (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c62828" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            )}
+                        </div>
+                        <div className="toast-content">
+                            <span className="toast-title">{toast.title}</span>
+                            <span className="toast-message">{toast.message}</span>
+                        </div>
+                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}>&times;</button>
+                    </div>
+                ))}
             </div>
         </div>
     );

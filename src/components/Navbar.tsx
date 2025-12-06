@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+
+import { useBooking } from '../context/BookingContext';
 
 const Navbar = () => {
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const location = useLocation();
+    const { openBooking } = useBooking();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -45,7 +48,7 @@ const Navbar = () => {
                         </>
                     )}
                     <a href="/#about" className="nav-link" onClick={() => setMobileMenuOpen(false)}>About</a>
-                    <a href="/#booking" className="btn btn-primary" onClick={() => setMobileMenuOpen(false)}>Book Now</a>
+                    <button className="btn btn-primary" onClick={() => { openBooking(); setMobileMenuOpen(false); }}>Book Now</button>
                 </div>
                 <button className={`mobile-menu-btn ${mobileMenuOpen ? 'active' : ''}`} id="mobileMenuBtn" onClick={toggleMobileMenu}>
                     <span></span>

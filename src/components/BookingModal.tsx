@@ -53,13 +53,34 @@ const BookingModal = () => {
         visible: false
     });
 
-    // Auto-Scroll to top on step change
+    // Auto-Scroll to top on step change & Check for scrollability
+    const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+
+    const checkScroll = (element: Element) => {
+        if (element.scrollHeight > element.clientHeight + 20) { // +20 buffer
+            // Only show if not already near bottom
+            if (element.scrollTop + element.clientHeight < element.scrollHeight - 20) {
+                setShowScrollIndicator(true);
+            } else {
+                setShowScrollIndicator(false);
+            }
+        } else {
+            setShowScrollIndicator(false);
+        }
+    };
+
     useEffect(() => {
         const content = document.querySelector('.booking-content');
         if (content) {
             content.scrollTop = 0;
+            // Short delay to allow rendering to complete
+            setTimeout(() => checkScroll(content), 100);
         }
-    }, [step]);
+    }, [step, formData]); // Check on step change and form data change (e.g. extension options expansion)
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        checkScroll(e.currentTarget);
+    };
 
     // Auto-Save Progress
     useEffect(() => {
@@ -586,7 +607,14 @@ const BookingModal = () => {
                         </div>
                     </div>
                 ) : (
-                    <div className="booking-content wizard-layout">
+                    <div className="booking-content wizard-layout" onScroll={handleScroll}>
+                        {showScrollIndicator && (
+                            <div className="scroll-indicator-overlay">
+                                <div className="bounce-arrow">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </div>
+                            </div>
+                        )}
                         <form onSubmit={step === 3 ? handleSubmit : handleNextStep} className="wizard-form">
 
                             {/* STEP 1: SERVICE SELECTION */}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useBooking } from '../context/BookingContext';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import FeedbackModal from '../components/FeedbackModal';
 
 interface Feedback {
@@ -13,10 +13,38 @@ interface Feedback {
     showInTestimonials: boolean;
 }
 
+interface AboutContent {
+    title: string;
+    description1: string;
+    description2: string;
+    imageUrl: string;
+}
+
 const Home = () => {
     const { openBooking } = useBooking();
     const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+    const [aboutContent, setAboutContent] = useState<AboutContent>({
+        title: "About it's ouR Studio",
+        description1: "Welcome to it's ouR Studio, where you're in complete control of your photography experience. Our state-of-the-art self-photography studio is designed to empower you to capture your authentic self in a comfortable, private environment.",
+        description2: "Equipped with professional lighting, multiple backdrops, and an intuitive remote control system, our studio makes it easy for anyone to create stunning, professional-quality photos. Whether you need headshots for your career, content for social media, or simply want to celebrate yourself, we provide the perfect space and tools.",
+        imageUrl: "/about-studio.jpg"
+    });
+
+    useEffect(() => {
+        const fetchAbout = async () => {
+            try {
+                const docRef = doc(db, 'siteContent', 'about');
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setAboutContent(docSnap.data() as AboutContent);
+                }
+            } catch (err) {
+                console.error("Error fetching about content:", err);
+            }
+        };
+        fetchAbout();
+    }, []);
 
     useEffect(() => {
         const q = query(
@@ -245,21 +273,16 @@ const Home = () => {
                     <div className="about-content">
                         <div className="about-image">
                             <div className="about-image-wrapper">
-                                <img src="/about-studio.jpg" alt="it's ouR Studio Photography Studio" id="aboutImage" />
+                                <img src={aboutContent.imageUrl} alt="it's ouR Studio Photography Studio" id="aboutImage" />
                             </div>
                         </div>
                         <div className="about-text">
-                            <h2 className="section-title">About it's ouR Studio</h2>
+                            <h2 className="section-title">{aboutContent.title}</h2>
                             <p className="about-description">
-                                Welcome to it's ouR Studio, where you're in complete control of your photography experience.
-                                Our state-of-the-art self-photography studio is designed to empower you to capture your
-                                authentic self in a comfortable, private environment.
+                                {aboutContent.description1}
                             </p>
                             <p className="about-description">
-                                Equipped with professional lighting, multiple backdrops, and an intuitive remote control
-                                system, our studio makes it easy for anyone to create stunning, professional-quality photos.
-                                Whether you need headshots for your career, content for social media, or simply want to
-                                celebrate yourself, we provide the perfect space and tools.
+                                {aboutContent.description2}
                             </p>
                             <div className="about-features">
                                 <div className="about-feature">

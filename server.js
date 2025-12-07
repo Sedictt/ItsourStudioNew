@@ -173,6 +173,44 @@ app.post('/upload', upload.single('paymentProof'), (req, res) => {
     });
 });
 
+// Gallery Upload Configuration
+const galleryDir = path.join(__dirname, 'public', 'gallery-uploads');
+if (!fs.existsSync(galleryDir)) {
+    fs.mkdirSync(galleryDir, { recursive: true });
+}
+
+const galleryStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, galleryDir);
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
+        cb(null, uniqueSuffix + '-' + sanitizedName);
+    }
+});
+
+const galleryUpload = multer({
+    storage: galleryStorage,
+    limits: { fileSize: 15 * 1024 * 1024 } // 15MB limit for higher quality
+});
+
+// Gallery Upload Endpoint
+app.post('/upload/gallery', galleryUpload.single('galleryImage'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Return the path relative to the public directory
+    // Note: Frontend should serve 'public' as root or alias /gallery-uploads
+    const publicPath = `/gallery-uploads/${req.file.filename}`;
+
+    res.json({
+        message: 'Gallery image uploaded successfully',
+        path: publicPath
+    });
+});
+
 // Email Endpoint
 app.post('/send-email', async (req, res) => {
     const { type, booking } = req.body;

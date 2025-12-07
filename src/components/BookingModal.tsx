@@ -154,6 +154,7 @@ const BookingModal = () => {
                 const ranges: BookedSlot[] = [];
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
+                    if (data.status === 'rejected' || data.status === 'cancelled') return; // Ignore rejected
                     if (data.time && data.durationTotal) {
                         const start = timeToMinutes(data.time);
                         const end = start + data.durationTotal;
@@ -455,14 +456,54 @@ const BookingModal = () => {
         if (step > 1) setStep(step - 1);
     };
 
+    const checkAvailability = async () => {
+        // Fresh fetch to ensure no race conditions
+        const q = query(
+            collection(db, 'bookings'),
+            where('date', '==', formData.date) // Fetch all for the day
+        );
+        const snapshot = await getDocs(q);
+
+        const proposedStart = timeToMinutes(formData.time);
+        const proposedEnd = proposedStart + durationTotal;
+
+        for (const doc of snapshot.docs) {
+            const data = doc.data();
+            // Ignore rejected bookings
+            if (data.status === 'rejected' || data.status === 'cancelled') continue;
+
+            if (data.time && data.durationTotal) {
+                const existingStart = timeToMinutes(data.time);
+                const existingEnd = existingStart + data.durationTotal;
+
+                // Overlap Check
+                if (proposedStart < existingEnd && proposedEnd > existingStart) {
+                    return false; // Conflict found
+                }
+            }
+        }
+        return true;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
         if (!paymentFile) {
             showToast("Please upload your payment proof.", 'error');
             return;
         }
 
         setIsSubmitting(true);
+
+        // 1. Concurrency Check (The "Double Booking" Prevention)
+        const isAvailable = await checkAvailability();
+        if (!isAvailable) {
+            setIsSubmitting(false);
+            showToast("⚠️ This slot was just booked by someone else! Please choose another time.", 'error');
+            // Refresh the grid
+            setFormData(prev => ({ ...prev, time: '' })); // Clear invalid time
+            return;
+        }
 
         try {
             let paymentProofUrl = '';

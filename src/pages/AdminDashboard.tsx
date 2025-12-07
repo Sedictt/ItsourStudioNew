@@ -55,6 +55,14 @@ interface User {
     lastLogin?: any;
 }
 
+interface GalleryData {
+    id: string;
+    src: string;
+    category: 'solo' | 'duo' | 'group';
+    alt: string;
+    createdAt: any;
+}
+
 interface Toast {
     id: number;
     type: 'success' | 'error';
@@ -69,6 +77,7 @@ const AdminDashboard = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
     const [users, setUsers] = useState<User[]>([]);
+    const [galleryItems, setGalleryItems] = useState<GalleryData[]>([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         total: 0,
@@ -95,7 +104,7 @@ const AdminDashboard = () => {
     });
 
     // UI States
-    const [activeTab, setActiveTab] = useState<'bookings' | 'feedbacks' | 'content' | 'users'>('bookings');
+    const [activeTab, setActiveTab] = useState<'bookings' | 'feedbacks' | 'content' | 'users' | 'gallery' | 'calendar'>('bookings');
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [showUserModal, setShowUserModal] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -106,6 +115,19 @@ const AdminDashboard = () => {
         role: 'viewer',
         status: 'active'
     });
+
+    // Gallery States
+    const [showGalleryModal, setShowGalleryModal] = useState(false);
+    const [galleryFile, setGalleryFile] = useState<File | null>(null);
+    const [galleryPreview, setGalleryPreview] = useState<string | null>(null);
+    const [galleryForm, setGalleryForm] = useState({
+        category: 'solo',
+        alt: ''
+    });
+
+    // Calendar State
+    const [calendarMonth, setCalendarMonth] = useState(new Date());
+
     const [toasts, setToasts] = useState<Toast[]>([]);
 
     // Filter/Sort/Pagination States
@@ -189,6 +211,25 @@ const AdminDashboard = () => {
         }, (error) => {
             console.error("Error fetching users:", error);
             showToast('error', 'Error', 'Failed to fetch users');
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+
+
+    // Fetch Gallery Items Real-time
+    useEffect(() => {
+        const q = query(collection(db, 'gallery'), orderBy('createdAt', 'desc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const galleryData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as GalleryData[];
+            setGalleryItems(galleryData);
+        }, (error) => {
+            console.error("Error fetching gallery:", error);
+            showToast('error', 'Error', 'Failed to fetch gallery items');
         });
 
         return () => unsubscribe();
@@ -427,6 +468,94 @@ const AdminDashboard = () => {
         }
     };
 
+    // Gallery Functions
+    const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (file.size > 15 * 1024 * 1024) {
+                showToast('error', 'File too large', 'Limit is 15MB');
+                return;
+            }
+            setGalleryFile(file);
+            const url = URL.createObjectURL(file);
+            setGalleryPreview(url);
+        }
+    };
+
+    const handleSaveGalleryItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!galleryFile) {
+            showToast('error', 'Missing Image', 'Please upload an image first');
+            return;
+        }
+
+        try {
+            // 1. Upload Image
+            const formData = new FormData();
+            formData.append('galleryImage', galleryFile);
+
+            const response = await fetch('http://localhost:3001/upload/gallery', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) throw new Error('Upload failed');
+
+            const data = await response.json();
+            const imageUrl = data.path;
+
+            // 2. Save to Firestore
+            await addDoc(collection(db, 'gallery'), {
+                src: imageUrl,
+                category: galleryForm.category,
+                alt: galleryForm.alt,
+                createdAt: serverTimestamp()
+            });
+
+            showToast('success', 'Uploaded', 'Image added to gallery');
+
+            // Reset
+            setGalleryFile(null);
+            setGalleryPreview(null);
+            setGalleryForm({ category: 'solo', alt: '' });
+            setShowGalleryModal(false);
+
+        } catch (error) {
+            console.error("Error upload to gallery:", error);
+            showToast('error', 'Error', 'Failed to upload image');
+        }
+    };
+
+    const handleDeleteGalleryItem = async (id: string) => {
+        // ideally we should also delete the file from disk using an API, but for now we just remove from DB
+        if (window.confirm("Delete this image from gallery?")) {
+            try {
+                await deleteDoc(doc(db, 'gallery', id));
+                showToast('success', 'Deleted', 'Image removed from gallery');
+            } catch (error) {
+                console.error("Error deleting gallery item:", error);
+                showToast('error', 'Error', 'Failed to delete image');
+            }
+        }
+    };
+
+    const handlePrevMonth = () => {
+        setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
+    };
+
+    const handleNextMonth = () => {
+        setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
+    };
+
+    const getDaysInMonth = (date: Date) => {
+        return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    };
+
+    const getFirstDayOfMonth = (date: Date) => {
+        return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    };
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -471,6 +600,18 @@ const AdminDashboard = () => {
                                 Users
                             </button>
                         )}
+                        <button
+                            className={`btn ${activeTab === 'gallery' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setActiveTab('gallery')}
+                        >
+                            Gallery
+                        </button>
+                        <button
+                            className={`btn ${activeTab === 'calendar' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setActiveTab('calendar')}
+                        >
+                            Calendar
+                        </button>
                     </div>
                 </header>
 
@@ -931,6 +1072,218 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 )}
+
+                {activeTab === 'calendar' && (
+                    <div className="bookings-section">
+                        <div className="bookings-header">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <button className="btn btn-outline" onClick={handlePrevMonth}>&lt;</button>
+                                <h3 style={{ minWidth: '200px', textAlign: 'center' }}>
+                                    {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                </h3>
+                                <button className="btn btn-outline" onClick={handleNextMonth}>&gt;</button>
+                            </div>
+                            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ width: '12px', height: '12px', background: '#d1e7dd', border: '1px solid #badbcc', borderRadius: '50%' }}></span>
+                                    Confirmed
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ width: '12px', height: '12px', background: '#fff3cd', border: '1px solid #ffecb5', borderRadius: '50%' }}></span>
+                                    Pending
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ width: '12px', height: '12px', background: '#f8d7da', border: '1px solid #f5c6cb', borderRadius: '50%' }}></span>
+                                    Rejected
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="calendar-container" style={{ padding: '2rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', background: '#ddd', border: '1px solid #ddd' }}>
+                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                                    <div key={day} style={{ background: '#f8f9fa', padding: '1rem', textAlign: 'center', fontWeight: 'bold' }}>{day}</div>
+                                ))}
+
+                                {Array.from({ length: getFirstDayOfMonth(calendarMonth) }).map((_, i) => (
+                                    <div key={`empty-${i}`} style={{ background: '#fff', minHeight: '120px' }}></div>
+                                ))}
+
+                                {Array.from({ length: getDaysInMonth(calendarMonth) }).map((_, i) => {
+                                    const day = i + 1;
+                                    const dateStr = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                    const dayBookings = bookings.filter(b => b.date === dateStr);
+
+                                    return (
+                                        <div key={day} style={{ background: '#fff', minHeight: '120px', padding: '0.5rem', borderTop: '1px solid #eee' }}>
+                                            <div style={{ textAlign: 'right', marginBottom: '0.5rem', color: '#999', fontSize: '0.9rem' }}>{day}</div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                                {dayBookings.map(b => (
+                                                    <div
+                                                        key={b.id}
+                                                        style={{
+                                                            fontSize: '0.75rem',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '4px',
+                                                            background: b.status === 'confirmed' ? '#d1e7dd' : b.status === 'pending' ? '#fff3cd' : '#f8d7da',
+                                                            color: b.status === 'confirmed' ? '#0f5132' : b.status === 'pending' ? '#664d03' : '#842029',
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        title={`${b.time} - ${b.fullName} (${b.package})`}
+                                                    >
+                                                        {b.time} {b.fullName.split(' ')[0]}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {activeTab === 'gallery' && (
+                    <div className="bookings-section">
+                        <div className="bookings-header">
+                            <h3>Gallery Manager</h3>
+                            <button className="btn btn-primary" onClick={() => setShowGalleryModal(true)}>
+                                + Add Photo
+                            </button>
+                        </div>
+                        <div style={{ padding: '2rem' }}>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                                gap: '1.5rem'
+                            }}>
+                                {galleryItems.map((item) => (
+                                    <div key={item.id} style={{
+                                        border: '1px solid #eee',
+                                        borderRadius: '8px',
+                                        overflow: 'hidden',
+                                        position: 'relative',
+                                        background: '#fff',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                                    }}>
+                                        <div style={{ aspectRatio: '3/4', position: 'relative' }}>
+                                            <img
+                                                src={item.src}
+                                                alt={item.alt}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            />
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '0.5rem',
+                                                right: '0.5rem',
+                                                background: 'rgba(255,255,255,0.9)',
+                                                padding: '0.2rem 0.5rem',
+                                                borderRadius: '4px',
+                                                fontSize: '0.7rem',
+                                                fontWeight: 'bold',
+                                                textTransform: 'uppercase'
+                                            }}>
+                                                {item.category}
+                                            </div>
+                                        </div>
+                                        <div style={{ padding: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.85rem', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+                                                {item.alt || 'No Title'}
+                                            </span>
+                                            <button
+                                                onClick={() => handleDeleteGalleryItem(item.id)}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: '#c62828',
+                                                    cursor: 'pointer',
+                                                    padding: '4px'
+                                                }}
+                                                title="Delete Image"
+                                            >
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {galleryItems.length === 0 && (
+                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#999' }}>
+                                        No images in gallery yet.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Gallery Upload Modal */}
+            <div className={`modal-overlay ${showGalleryModal ? 'active' : ''}`} onClick={() => setShowGalleryModal(false)}>
+                <div className="modal-card" onClick={e => e.stopPropagation()}>
+                    <div className="modal-header">
+                        <h3 className="modal-title">Upload to Gallery</h3>
+                        <button className="btn-close" onClick={() => setShowGalleryModal(false)}>&times;</button>
+                    </div>
+                    <form onSubmit={handleSaveGalleryItem}>
+                        <div style={{ display: 'grid', gap: '1.5rem' }}>
+                            <div style={{
+                                border: '2px dashed #ddd',
+                                borderRadius: '8px',
+                                padding: '2rem',
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                position: 'relative',
+                                background: '#fafafa'
+                            }} onClick={() => document.getElementById('gallery-upload')?.click()}>
+                                {galleryPreview ? (
+                                    <img src={galleryPreview} alt="Preview" style={{ maxHeight: '200px', maxWidth: '100%', borderRadius: '4px' }} />
+                                ) : (
+                                    <div>
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                        <p style={{ marginTop: '0.5rem', color: '#666' }}>Click to upload image (Max 15MB)</p>
+                                    </div>
+                                )}
+                                <input
+                                    id="gallery-upload"
+                                    type="file"
+                                    accept="image/*"
+                                    style={{ display: 'none' }}
+                                    onChange={handleGalleryFileChange}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="form-label">Category</label>
+                                <select
+                                    className="form-input"
+                                    value={galleryForm.category}
+                                    onChange={e => setGalleryForm({ ...galleryForm, category: e.target.value as any })}
+                                >
+                                    <option value="solo">Solo</option>
+                                    <option value="duo">Duo</option>
+                                    <option value="group">Group</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="form-label">Title / Caption</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="e.g. Summer Photoshoot"
+                                    value={galleryForm.alt}
+                                    onChange={e => setGalleryForm({ ...galleryForm, alt: e.target.value })}
+                                />
+                            </div>
+
+                            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+                                Upload and Save
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             {/* User Modal */}

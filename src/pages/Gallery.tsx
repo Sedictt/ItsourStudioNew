@@ -1,41 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 
-// Gallery images from the studio
-const galleryImages = [
-    // Solo photos
-    { id: 1, src: '/gallery/solo1.webp', category: 'solo', alt: 'Solo Portrait 1' },
-    { id: 2, src: '/gallery/solo2.webp', category: 'solo', alt: 'Solo Portrait 2' },
-    { id: 3, src: '/gallery/solo3.webp', category: 'solo', alt: 'Solo Portrait 3' },
-    { id: 4, src: '/gallery/solo4.webp', category: 'solo', alt: 'Solo Portrait 4' },
-    { id: 5, src: '/gallery/solo5.webp', category: 'solo', alt: 'Solo Portrait 5' },
-
-    // Duo photos
-    { id: 6, src: '/gallery/duo1.webp', category: 'duo', alt: 'Duo Photoshoot 1' },
-    { id: 7, src: '/gallery/duo2.webp', category: 'duo', alt: 'Duo Photoshoot 2' },
-    { id: 8, src: '/gallery/duo3.webp', category: 'duo', alt: 'Duo Photoshoot 3' },
-    { id: 9, src: '/gallery/duo4.webp', category: 'duo', alt: 'Duo Photoshoot 4' },
-    { id: 10, src: '/gallery/duo5.webp', category: 'duo', alt: 'Duo Photoshoot 5' },
-
-    // Group photos
-    { id: 11, src: '/gallery/group1.webp', category: 'group', alt: 'Group Photoshoot 1' },
-    { id: 12, src: '/gallery/group2.webp', category: 'group', alt: 'Group Photoshoot 2' },
-    { id: 13, src: '/gallery/group3.webp', category: 'group', alt: 'Group Photoshoot 3' },
-    { id: 14, src: '/gallery/group4.webp', category: 'group', alt: 'Group Photoshoot 4' },
-    { id: 15, src: '/gallery/group5.webp', category: 'group', alt: 'Group Photoshoot 5' },
-];
+interface GalleryImage {
+    id: string;
+    src: string;
+    category: 'solo' | 'duo' | 'group';
+    alt: string;
+}
 
 const Gallery = () => {
+    const [images, setImages] = useState<GalleryImage[]>([]);
+    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+    // Fetch Gallery Images
+    useEffect(() => {
+        const fetchGallery = async () => {
+            try {
+                const q = query(collection(db, 'gallery'), orderBy('createdAt', 'desc'));
+                const snapshot = await getDocs(q);
+                const fetchedImages = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                })) as GalleryImage[];
+
+                setImages(fetchedImages);
+            } catch (error) {
+                console.error("Error fetching gallery:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchGallery();
+    }, []);
+
     const filteredImages = filter === 'all'
-        ? galleryImages
-        : galleryImages.filter(img => img.category === filter);
+        ? images
+        : images.filter(img => img.category === filter);
 
     const openLightbox = (index: number) => {
-        // Find the index in the full array if needed, or just use the filtered index
-        // For simplicity, let's just use the index within the filtered view
         setCurrentImageIndex(index);
         setLightboxOpen(true);
     };
@@ -53,6 +60,14 @@ const Gallery = () => {
         e.stopPropagation();
         setCurrentImageIndex((prev) => (prev - 1 + filteredImages.length) % filteredImages.length);
     };
+
+    if (loading) {
+        return (
+            <div className="gallery-page" style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div className="loading-spinner"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="gallery-page">
@@ -95,31 +110,37 @@ const Gallery = () => {
 
                     {/* Gallery Grid - Masonry Layout */}
                     <div className="gallery-masonry">
-                        {filteredImages.map((image, index) => (
-                            <div
-                                key={image.id}
-                                className="gallery-item"
-                                onClick={() => openLightbox(index)}
-                                style={{ animationDelay: `${index * 0.05}s` }}
-                            >
-                                <img src={image.src} alt={image.alt} loading="lazy" />
-                                <div className="gallery-overlay">
-                                    <div className="gallery-overlay-content">
-                                        <svg className="view-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                            <circle cx="12" cy="12" r="3"></circle>
-                                        </svg>
-                                        <span>View Full</span>
+                        {filteredImages.length === 0 ? (
+                            <div style={{ padding: '2rem', textAlign: 'center', width: '100%', color: '#888' }}>
+                                <p>No photos found in this category yet.</p>
+                            </div>
+                        ) : (
+                            filteredImages.map((image, index) => (
+                                <div
+                                    key={image.id}
+                                    className="gallery-item"
+                                    onClick={() => openLightbox(index)}
+                                    style={{ animationDelay: `${index * 0.05}s` }}
+                                >
+                                    <img src={image.src} alt={image.alt} loading="lazy" />
+                                    <div className="gallery-overlay">
+                                        <div className="gallery-overlay-content">
+                                            <svg className="view-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                <circle cx="12" cy="12" r="3"></circle>
+                                            </svg>
+                                            <span>View Full</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
             </section>
 
             {/* Lightbox */}
-            {lightboxOpen && (
+            {lightboxOpen && filteredImages.length > 0 && (
                 <div className="lightbox active" onClick={closeLightbox}>
                     <button className="lightbox-close" onClick={closeLightbox}>&times;</button>
                     <button className="lightbox-prev" onClick={prevImage}>&#10094;</button>

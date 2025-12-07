@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import './Admin.css';
 
 interface Booking {
@@ -44,6 +44,17 @@ interface SiteContent {
     };
 }
 
+interface User {
+    id: string;
+    fullName: string;
+    email: string;
+    role: 'admin' | 'editor' | 'viewer';
+    status: 'active' | 'inactive';
+    password?: string; // stored for simple auth, TODO: use Firebase Auth
+    createdAt?: any;
+    lastLogin?: any;
+}
+
 interface Toast {
     id: number;
     type: 'success' | 'error';
@@ -57,6 +68,7 @@ const AdminDashboard = () => {
     // Data States
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         total: 0,
@@ -83,8 +95,17 @@ const AdminDashboard = () => {
     });
 
     // UI States
-    const [activeTab, setActiveTab] = useState<'bookings' | 'feedbacks' | 'content'>('bookings');
+    const [activeTab, setActiveTab] = useState<'bookings' | 'feedbacks' | 'content' | 'users'>('bookings');
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [showUserModal, setShowUserModal] = useState(false);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [userForm, setUserForm] = useState({
+        fullName: '',
+        email: '',
+        password: '',
+        role: 'viewer',
+        status: 'active'
+    });
     const [toasts, setToasts] = useState<Toast[]>([]);
 
     // Filter/Sort/Pagination States
@@ -151,6 +172,23 @@ const AdminDashboard = () => {
         }, (error) => {
             console.error("Error fetching feedbacks:", error);
             showToast('error', 'Error', 'Failed to fetch feedback data');
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Fetch Users Real-time
+    useEffect(() => {
+        const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const usersData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as User[];
+            setUsers(usersData);
+        }, (error) => {
+            console.error("Error fetching users:", error);
+            showToast('error', 'Error', 'Failed to fetch users');
         });
 
         return () => unsubscribe();
@@ -328,6 +366,67 @@ const AdminDashboard = () => {
         }));
     };
 
+    // User Management Functions
+    const resetUserForm = () => {
+        setUserForm({
+            fullName: '',
+            email: '',
+            password: '',
+            role: 'viewer',
+            status: 'active'
+        });
+        setEditingUser(null);
+        setShowUserModal(false);
+    };
+
+    const handleEditUser = (user: User) => {
+        setEditingUser(user);
+        setUserForm({
+            fullName: user.fullName,
+            email: user.email,
+            password: user.password || '',
+            role: user.role, // @ts-ignore
+            status: user.status
+        });
+        setShowUserModal(true);
+    };
+
+    const handleSaveUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            if (editingUser) {
+                const userRef = doc(db, 'users', editingUser.id);
+                await updateDoc(userRef, {
+                    ...userForm,
+                    updatedAt: serverTimestamp()
+                });
+                showToast('success', 'Updated', 'User updated successfully');
+            } else {
+                await addDoc(collection(db, 'users'), {
+                    ...userForm,
+                    createdAt: serverTimestamp()
+                });
+                showToast('success', 'Created', 'User created successfully');
+            }
+            resetUserForm();
+        } catch (error) {
+            console.error("Error saving user:", error);
+            showToast('error', 'Error', 'Failed to save user');
+        }
+    };
+
+    const handleDeleteUser = async (id: string) => {
+        if (window.confirm("Are you sure you want to delete this user?")) {
+            try {
+                await deleteDoc(doc(db, 'users', id));
+                showToast('success', 'Deleted', 'User deleted successfully');
+            } catch (error) {
+                console.error("Error deleting user:", error);
+                showToast('error', 'Error', 'Failed to delete user');
+            }
+        }
+    };
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -364,6 +463,14 @@ const AdminDashboard = () => {
                         >
                             Content
                         </button>
+                        {(sessionStorage.getItem('userRole') === 'admin' || !sessionStorage.getItem('userRole')) && (
+                            <button
+                                className={`btn ${activeTab === 'users' ? 'btn-primary' : 'btn-outline'}`}
+                                onClick={() => setActiveTab('users')}
+                            >
+                                Users
+                            </button>
+                        )}
                     </div>
                 </header>
 
@@ -745,6 +852,158 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 )}
+
+                {activeTab === 'users' && (
+                    <div className="bookings-section">
+                        <div className="bookings-header">
+                            <h3>User Management (RBMS)</h3>
+                            <button className="btn btn-primary" onClick={() => {
+                                resetUserForm();
+                                setShowUserModal(true);
+                            }}>
+                                + Add User
+                            </button>
+                        </div>
+                        <div className="bookings-table-container">
+                            <table className="bookings-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {users.map((user) => (
+                                        <tr key={user.id}>
+                                            <td style={{ fontWeight: 500 }}>{user.fullName}</td>
+                                            <td>{user.email}</td>
+                                            <td>
+                                                <span className={`status-badge role-${user.role}`}>
+                                                    {user.role}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span style={{
+                                                    color: user.status === 'active' ? '#2e7d32' : '#c62828',
+                                                    background: user.status === 'active' ? '#e8f5e9' : '#ffebee',
+                                                    padding: '0.25rem 0.5rem',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 600
+                                                }}>
+                                                    {user.status.toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td> {user.createdAt?.toDate ? user.createdAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                                            <td>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <button
+                                                        className="action-btn"
+                                                        title="Edit User"
+                                                        onClick={() => handleEditUser(user)}
+                                                    >
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                    </button>
+                                                    <button
+                                                        className="action-btn"
+                                                        title="Delete User"
+                                                        onClick={() => handleDeleteUser(user.id)}
+                                                    >
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="red" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {users.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                                                No users found.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* User Modal */}
+            <div className={`modal-overlay ${showUserModal ? 'active' : ''}`} onClick={resetUserForm}>
+                <div className="modal-card" onClick={e => e.stopPropagation()}>
+                    <div className="modal-header">
+                        <h3 className="modal-title">{editingUser ? 'Edit User' : 'Add New User'}</h3>
+                        <button className="btn-close" onClick={resetUserForm}>&times;</button>
+                    </div>
+                    <form onSubmit={handleSaveUser}>
+                        <div style={{ display: 'grid', gap: '1rem' }}>
+                            <div>
+                                <label className="form-label">Full Name</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="form-input"
+                                    value={userForm.fullName}
+                                    onChange={e => setUserForm({ ...userForm, fullName: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Email</label>
+                                <input
+                                    type="email"
+                                    required
+                                    className="form-input"
+                                    value={userForm.email}
+                                    onChange={e => setUserForm({ ...userForm, email: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Password</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="form-input"
+                                    placeholder={editingUser ? "Leave same or enter new" : "Enter password"}
+                                    value={userForm.password}
+                                    onChange={e => setUserForm({ ...userForm, password: e.target.value })}
+                                />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label className="form-label">Role</label>
+                                    <select
+                                        className="form-input"
+                                        value={userForm.role}
+                                        onChange={e => setUserForm({ ...userForm, role: e.target.value })}
+                                    >
+                                        <option value="viewer">Viewer</option>
+                                        <option value="editor">Editor</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="form-label">Status</label>
+                                    <select
+                                        className="form-input"
+                                        value={userForm.status}
+                                        onChange={e => setUserForm({ ...userForm, status: e.target.value })}
+                                    >
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem', width: '100%' }}>
+                                {editingUser ? 'Update User' : 'Create User'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             {/* Image Preview Modal */}
@@ -774,7 +1033,7 @@ const AdminDashboard = () => {
                     </div>
                 ))}
             </div>
-        </div>
+        </div >
     );
 };
 

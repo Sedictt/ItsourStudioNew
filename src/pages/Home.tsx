@@ -46,6 +46,27 @@ const Home = () => {
         description2: "Equipped with professional lighting, multiple backdrops, and an intuitive remote control system, our studio makes it easy for anyone to create stunning, professional-quality photos. Whether you need headshots for your career, content for social media, or simply want to celebrate yourself, we provide the perfect space and tools.",
         imageUrl: "/about-studio.jpg"
     });
+    const [showBackToTop, setShowBackToTop] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            if (window.scrollY > 300) {
+                setShowBackToTop(true);
+            } else {
+                setShowBackToTop(false);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const scrollToTop = () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    };
 
     useEffect(() => {
         const fetchAbout = async () => {
@@ -83,15 +104,32 @@ const Home = () => {
 
     // Hero Interaction Logic
     const heroRef = useRef<HTMLElement>(null);
-    const handleHeroMouseMove = (e: React.MouseEvent) => {
-        if (!heroRef.current) return;
-        const rect = heroRef.current.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const rafRef = useRef<number | null>(null);
 
-        heroRef.current.style.setProperty('--mouse-x', `${x}%`);
-        heroRef.current.style.setProperty('--mouse-y', `${y}%`);
-    };
+    const handleHeroMouseMove = useCallback((e: React.MouseEvent) => {
+        if (!heroRef.current || rafRef.current) return;
+
+        const { clientX, clientY } = e;
+        const element = heroRef.current;
+
+        rafRef.current = requestAnimationFrame(() => {
+            const rect = element.getBoundingClientRect();
+            const x = (clientX - rect.left) / rect.width;
+            const y = (clientY - rect.top) / rect.height;
+
+            element.style.setProperty('--mouse-x', `${x}`);
+            element.style.setProperty('--mouse-y', `${y}`);
+            rafRef.current = null;
+        });
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+            }
+        };
+    }, []);
 
     const [isDragging, setIsDragging] = useState(false);
     const [startX, setStartX] = useState(0);
@@ -222,14 +260,16 @@ const Home = () => {
                 </div>
 
                 <div className="hero-content">
-                    <h1 className="hero-title">
-                        <span className="hero-subtitle">Welcome to</span>
-                        it's ouR Studio
-                    </h1>
-                    <p className="hero-description">Capture your authentic self in our premium self-photography studio</p>
-                    <div className="hero-buttons">
-                        <Link to="/gallery" className="btn btn-primary btn-large">View Gallery</Link>
-                        <button className="btn btn-secondary btn-large" onClick={() => openBooking()}>Book Session</button>
+                    <div className="parallax-content">
+                        <h1 className="hero-title">
+                            <span className="hero-subtitle">Welcome to</span>
+                            it's ouR Studio
+                        </h1>
+                        <p className="hero-description">Capture your authentic self in our premium self-photography studio</p>
+                        <div className="hero-buttons">
+                            <Link to="/gallery" className="btn btn-primary btn-large">View Gallery</Link>
+                            <button className="btn btn-secondary btn-large" onClick={() => openBooking()}>Book Session</button>
+                        </div>
                     </div>
                 </div>
                 <div className="scroll-indicator">
@@ -517,6 +557,15 @@ const Home = () => {
                     </div>
                 </div>
             </section>
+            <button
+                className={`back-to-top ${showBackToTop ? 'visible' : ''}`}
+                onClick={scrollToTop}
+                aria-label="Back to Top"
+            >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 19V5M12 5L5 12M12 5L19 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </button>
         </>
     );
 };

@@ -455,16 +455,167 @@ p {
   text-align: center;
   overflow: hidden;
   padding-top: 0;
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+  cursor: crosshair;
 }
 
 .hero-background {
   position: absolute;
+  top: -5%;
+  left: -5%;
+  width: 110%;
+  height: 110%;
+  background: var(--gradient-overlay), url('/about-studio.jpg') center/cover;
+  /* Combine KenBurns with Mouse Parallax */
+  /* We use translate to move based on mouse, and scale for breathing */
+  transform: translate(calc((var(--mouse-x) - 50%) * -20px), calc((var(--mouse-y) - 50%) * -20px));
+  transition: transform 0.1s linear;
+  will-change: transform;
+}
+
+/* Camera Interface UI */
+.camera-interface {
+  position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Rule of Thirds Grid */
+.camera-grid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  height: 85%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.1);
+  /* Subtle vignette darkening outside frame */
+}
+
+/* Grid Lines */
+.camera-grid::before,
+.camera-grid::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.camera-grid::before {
+  top: 33.33%;
+  left: 0;
+  width: 100%;
+  height: 33.33%;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: none;
+}
+
+.camera-grid::after {
+  left: 33.33%;
+  top: 0;
+  height: 100%;
+  width: 33.33%;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: none;
+}
+
+
+/* Focus Box that follows mouse */
+/* Focus Box that follows mouse */
+.focus-rect {
+  position: absolute;
+  top: var(--mouse-y);
+  left: var(--mouse-x);
+  width: 80px;
+  height: 80px;
+  pointer-events: none;
+  /* Centering the box on the cursor */
+  transform: translate(-50%, -50%);
+  /* Slight lag for organic feel */
+  transition: top 0.1s ease-out, left 0.1s ease-out;
+  will-change: top, left;
+}
+
+/* Focus Corners */
+.focus-corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: rgba(255, 255, 255, 0.9);
+  border-style: solid;
+  border-width: 0;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
+}
+
+.focus-corner.top-left {
+  top: 0;
+  left: 0;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.focus-corner.top-right {
+  top: 0;
   right: 0;
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+
+.focus-corner.bottom-left {
   bottom: 0;
-  background: var(--gradient-overlay), url('/about-studio.jpg') center/cover;
-  animation: kenBurns 20s ease-in-out infinite alternate;
+  left: 0;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+
+.focus-corner.bottom-right {
+  bottom: 0;
+  right: 0;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+/* Camera Data Text */
+.camera-data {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: monospace;
+  font-size: 1rem;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  padding: 2rem;
+}
+
+.camera-data.top-left {
+  top: 0;
+  left: 0;
+}
+
+.camera-data.top-right {
+  top: 0;
+  right: 0;
+}
+
+.camera-data.bottom-left {
+  bottom: 0;
+  left: 0;
+}
+
+.camera-data.bottom-right {
+  bottom: 0;
+  right: 0;
+}
+
+.camera-data span {
+  color: var(--color-terracotta);
+  font-weight: bold;
 }
 
 @keyframes kenBurns {
@@ -613,6 +764,37 @@ p {
   /* Mask to fade edges */
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  position: relative;
+  z-index: 1;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.gallery-carousel-container:active {
+  cursor: grabbing;
+}
+
+/* Texture for Gallery: Polka Dots (Focus points) */
+.gallery-section {
+  position: relative;
+  background-color: #fff;
+  overflow: hidden;
+}
+
+.gallery-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(var(--color-terracotta) 2px, transparent 2.5px);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .gallery-track {
@@ -640,28 +822,123 @@ p {
   flex: 0 0 300px;
   height: 400px;
   position: relative;
-  transition: transform var(--transition-base), opacity var(--transition-base);
-  border-radius: var(--radius-lg);
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  border-radius: 4px;
+  /* Slight radius for paper feel */
   overflow: hidden;
   cursor: pointer;
+  border: 12px solid white;
+  background: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  /* Deep shadow */
+}
+
+/* Casual Tilt Effect */
+.gallery-card:nth-child(odd) {
+  transform: rotate(-1.5deg);
+}
+
+.gallery-card:nth-child(even) {
+  transform: rotate(1.5deg);
+  margin-top: 10px;
+  /* Slight stagger */
 }
 
 .gallery-card-inner {
   width: 100%;
   height: 100%;
   position: relative;
+  overflow: hidden;
 }
 
 .gallery-card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.6s ease;
 }
 
 /* Hover effect for the card */
 .gallery-card:hover {
-  transform: scale(1.05);
+  transform: scale(1.02) rotate(0deg) !important;
+  /* Straigten and lift */
   z-index: 10;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+.gallery-card:hover img {
+  transform: scale(1.1);
+}
+
+/* Viewfinder Overlay */
+.gallery-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+
+  /* Viewfinder Corners */
+  --c-len: 20px;
+  --c-wid: 2px;
+  --c-col: rgba(255, 255, 255, 0.9);
+
+  background-image:
+    linear-gradient(to right, var(--c-col) var(--c-len), transparent var(--c-len)),
+    linear-gradient(to bottom, var(--c-col) var(--c-len), transparent var(--c-len)),
+    linear-gradient(to left, var(--c-col) var(--c-len), transparent var(--c-len)),
+    linear-gradient(to bottom, var(--c-col) var(--c-len), transparent var(--c-len)),
+    linear-gradient(to left, var(--c-col) var(--c-len), transparent var(--c-len)),
+    linear-gradient(to top, var(--c-col) var(--c-len), transparent var(--c-len)),
+    linear-gradient(to right, var(--c-col) var(--c-len), transparent var(--c-len)),
+    linear-gradient(to top, var(--c-col) var(--c-len), transparent var(--c-len));
+
+  background-position:
+    top left, top left,
+    top right, top right,
+    bottom right, bottom right,
+    bottom left, bottom left;
+
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-card:hover .gallery-overlay {
+  opacity: 1;
+}
+
+.gallery-info {
+  text-align: center;
+  color: white;
+  transform: translateY(20px);
+  opacity: 0;
+  transition: all 0.4s ease 0.1s;
+}
+
+.gallery-card:hover .gallery-info {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.gallery-category {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.gallery-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Removed carousel-instruction as it's no longer needed for auto-scroll */
@@ -670,193 +947,264 @@ p {
    SERVICES SECTION
    =================================== */
 
+/* ===================================
+   SERVICES SECTION
+   =================================== */
+
 .services-section {
   padding: var(--spacing-3xl) 0;
-  background: linear-gradient(to bottom, #ffffff, var(--color-cream));
+  background-color: #fcf8f5;
+  /* Warm off-white for contrast */
   position: relative;
   overflow: hidden;
 }
 
-/* Add decorative background blobs */
-.services-section::before,
-.services-section::after {
+/* Modern Grid Background */
+.services-section::before {
   content: '';
   position: absolute;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: var(--color-terracotta);
-  opacity: 0.05;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(191, 106, 57, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(191, 106, 57, 0.1) 1px, transparent 1px);
+  background-size: 40px 40px;
   z-index: 0;
-  filter: blur(60px);
-}
-
-.services-section::before {
-  top: -100px;
-  left: -100px;
+  pointer-events: none;
 }
 
 .services-section::after {
-  bottom: -100px;
-  right: -100px;
+  content: none;
+  /* Remove the second blob element */
+}
+
+@keyframes floatBlobs {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate(30px, -30px) scale(1.1);
+  }
+
+  100% {
+    transform: translate(-20px, 20px) scale(1);
+  }
 }
 
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--spacing-xl);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  align-items: center;
+  padding: 1rem;
   position: relative;
   z-index: 1;
 }
 
 .service-card {
   position: relative;
-  padding: var(--spacing-lg);
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
-  transition: all var(--transition-base);
+  padding: 2.5rem 2rem;
+  background: #ffffff;
+  border: 1px solid rgba(191, 106, 57, 0.15);
+  /* Clearer border */
+  border-radius: 24px;
+  box-shadow:
+    0 10px 25px -5px rgba(59, 44, 40, 0.08),
+    0 8px 10px -6px rgba(59, 44, 40, 0.08);
+  /* Deeper shadow */
+  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+  height: 100%;
 }
 
 .service-card:hover {
-  transform: translateY(-10px);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--color-terracotta);
+  transform: translateY(-8px);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.05),
+    0 10px 10px -5px rgba(0, 0, 0, 0.02);
+  border-color: rgba(191, 106, 57, 0.2);
 }
 
+/* Featured Card Styling - Terracotta Gradient */
 .service-card.featured {
-  background: var(--gradient-primary);
+  background: linear-gradient(145deg, #bf6a39, #a05328);
   color: white;
   transform: scale(1.05);
-  box-shadow: 0 10px 30px rgba(191, 106, 57, 0.3);
-  animation: float 6s ease-in-out infinite;
+  box-shadow:
+    0 25px 50px -12px rgba(191, 106, 57, 0.4);
+  border: none;
+  z-index: 2;
+  position: relative;
 }
 
-@keyframes float {
-
-  0%,
-  100% {
-    transform: scale(1.05) translateY(0);
-  }
-
-  50% {
-    transform: scale(1.05) translateY(-10px);
-  }
-}
-
+/* Hover on featured card */
 .service-card.featured:hover {
   transform: scale(1.08) translateY(-10px);
-  animation-play-state: paused;
+  box-shadow:
+    0 35px 60px -15px rgba(191, 106, 57, 0.5);
 }
 
 .service-card.featured h3,
 .service-card.featured p,
 .service-card.featured li,
-.service-card.featured .service-price,
-.service-card.featured .service-icon {
+.service-card.featured .service-price {
   color: white;
 }
 
 .service-card.featured .btn {
-  color: var(--color-primary);
-  font-weight: 700;
   background: white;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  color: var(--color-dark);
+  font-weight: 700;
+  border: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.service-card.featured .btn:hover {
+  background: var(--color-terracotta);
+  color: white;
+}
+
+/* Pulse animation for badge */
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
 }
 
 .featured-badge {
   position: absolute;
-  top: -15px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--color-dark);
-  color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 1px;
+  top: 1rem;
+  right: 1rem;
+  left: auto;
+  transform: none;
+  background: white;
+  color: var(--color-terracotta);
+  padding: 0.35rem 1.25rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  animation: pulseGlow 2s infinite;
 }
 
 .service-icon {
-  font-size: 2rem;
-  margin-bottom: var(--spacing-sm);
-  width: 60px;
-  height: 60px;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-cream);
+  background: #fdf8f6;
   border-radius: 50%;
-  color: var(--color-primary);
-  transition: transform var(--transition-base);
+  color: var(--color-terracotta);
+  transition: transform 0.3s ease;
 }
 
 .service-card:hover .service-icon {
-  transform: rotateY(180deg);
+  transform: scale(1.1) rotate(5deg);
+  background: var(--color-terracotta);
+  color: white;
 }
 
 .service-card.featured .service-icon {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   color: white;
+}
+
+.service-card.featured:hover .service-icon {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .service-title {
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: 0.25rem;
+  font-size: 1.5rem;
 }
 
 .service-duration {
-  color: var(--color-text-light);
-  font-size: 0.875rem;
-  margin-bottom: var(--spacing-sm);
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .service-card.featured .service-duration {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.service-description {
-  margin-bottom: var(--spacing-md);
-  flex-grow: 1;
-}
-
-.service-features {
-  list-style: none;
-  margin-bottom: var(--spacing-lg);
-  width: 100%;
-}
-
-.service-features li {
-  padding: 0.35rem 0;
-  border-bottom: 1px solid rgba(59, 44, 40, 0.1);
-}
-
-.service-card.featured .service-features li {
-  border-bottom-color: rgba(255, 255, 255, 0.2);
-}
-
-.service-features li::before {
-  content: '✓ ';
-  margin-right: var(--spacing-xs);
-  color: var(--color-terracotta);
-}
-
-.service-card.featured .service-features li::before {
-  color: white;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .service-price {
   font-family: var(--font-display);
-  font-size: 2rem;
-  margin-bottom: var(--spacing-md);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-terracotta);
+  margin-bottom: 1rem;
+  line-height: 1;
+}
+
+.service-description {
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.service-features {
+  list-style: none;
+  margin: 0 0 2rem 0;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+}
+
+.service-features li {
+  padding: 0.5rem 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.95rem;
+  color: #374151;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  /* Subtle separator */
+}
+
+/* Custom Checkmark */
+.service-features li::before {
+  content: '✓';
+  color: var(--color-terracotta);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.service-card.featured .service-features li {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.service-card.featured .service-features li::before {
+  color: #ffaa75;
+  /* Lighter orange */
+}
+
+.service-card.featured .service-features li:last-child {
+  border-bottom: none;
 }
 
 /* ===================================
@@ -865,6 +1213,27 @@ p {
 
 .about-section {
   padding: var(--spacing-3xl) 0;
+  position: relative;
+  background-color: #fff;
+  overflow: hidden;
+}
+
+.about-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: repeating-linear-gradient(45deg,
+      rgba(191, 106, 57, 0.1) 0,
+      rgba(191, 106, 57, 0.1) 1px,
+      transparent 0,
+      transparent 50%);
+  background-size: 20px 20px;
+  opacity: 0.8;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .about-content {

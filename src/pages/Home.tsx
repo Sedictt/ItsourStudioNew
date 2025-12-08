@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useBooking } from '../context/BookingContext';
 import { db } from '../firebase';
@@ -20,6 +20,21 @@ interface AboutContent {
     description2: string;
     imageUrl: string;
 }
+
+const galleryItems = [
+    { src: '/gallery/solo1.webp', category: 'Portrait', title: 'Solo Session' },
+    { src: '/gallery/duo1.webp', category: 'Couple', title: 'Duo Shoot' },
+    { src: '/gallery/group1.webp', category: 'Group', title: 'Barkada' },
+    { src: '/gallery/solo2.webp', category: 'Portrait', title: 'Creative Solo' },
+    { src: '/gallery/duo2.webp', category: 'Couple', title: 'Partner in Crime' },
+    { src: '/gallery/group2.webp', category: 'Group', title: 'Squad Goals' },
+    { src: '/gallery/solo3.webp', category: 'Portrait', title: 'Profile Update' },
+    { src: '/gallery/duo3.webp', category: 'Couple', title: 'Anniversary' },
+    { src: '/gallery/group3.webp', category: 'Group', title: 'Family Love' },
+    { src: '/gallery/solo4.webp', category: 'Portrait', title: 'Self Love' },
+    { src: '/gallery/duo4.webp', category: 'Couple', title: 'Besties' },
+    { src: '/gallery/group4.webp', category: 'Group', title: 'Team Bonding' },
+];
 
 const Home = () => {
     const { openBooking } = useBooking();
@@ -66,6 +81,112 @@ const Home = () => {
         return () => unsubscribe();
     }, []);
 
+    // Hero Interaction Logic
+    const heroRef = useRef<HTMLElement>(null);
+    const handleHeroMouseMove = (e: React.MouseEvent) => {
+        if (!heroRef.current) return;
+        const rect = heroRef.current.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        heroRef.current.style.setProperty('--mouse-x', `${x}%`);
+        heroRef.current.style.setProperty('--mouse-y', `${y}%`);
+    };
+
+    const [isDragging, setIsDragging] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [currentTranslate, setCurrentTranslate] = useState(0);
+    const [prevTranslate, setPrevTranslate] = useState(0);
+
+    // Animation state
+    const trackRef = useRef<HTMLDivElement>(null);
+    const animationRef = useRef<number>(0);
+    const draggingRef = useRef(false); // To access fresh state in loop if needed, though strictly we use state for renders
+
+    // Using a ref for currentTranslate to avoid closure staleness in the animation loop
+    const translateRef = useRef(0);
+
+    // Speed of auto-scroll (pixels per frame)
+    const scrollSpeed = 0.5;
+
+    const animationLoop = useCallback(() => {
+        if (!draggingRef.current) {
+            translateRef.current -= scrollSpeed;
+
+            // Reset if we've scrolled past the first set of items
+            // We need to know the width of the first set. 
+            // Approximation: width of half the track.
+            if (trackRef.current) {
+                const trackWidth = trackRef.current.scrollWidth;
+                const halfWidth = trackWidth / 2;
+
+                if (Math.abs(translateRef.current) >= halfWidth) {
+                    translateRef.current = 0;
+                }
+            }
+
+            setCurrentTranslate(translateRef.current);
+        }
+        animationRef.current = requestAnimationFrame(animationLoop);
+    }, []);
+
+    useEffect(() => {
+        animationRef.current = requestAnimationFrame(animationLoop);
+        return () => cancelAnimationFrame(animationRef.current);
+    }, [animationLoop]);
+
+    const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+        setIsDragging(true);
+        draggingRef.current = true;
+
+        const pageX = 'touches' in e ? e.touches[0].pageX : (e as React.MouseEvent).pageX;
+        setStartX(pageX);
+
+        // Only cancel animation loop if we want to purely manual drag. 
+        // But for "pause and drag", we keep the loop running but conditionally update?
+        // Actually, better to just pause the AUTOMATIC update.
+        // We still need to update state during drag.
+        cancelAnimationFrame(animationRef.current);
+
+        setPrevTranslate(translateRef.current);
+    };
+
+    const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!isDragging) return;
+
+        const pageX = 'touches' in e ? e.touches[0].pageX : (e as React.MouseEvent).pageX;
+        const currentPosition = pageX;
+        const diff = currentPosition - startX;
+
+        translateRef.current = prevTranslate + diff;
+        setCurrentTranslate(translateRef.current);
+    };
+
+    const handleDragEnd = () => {
+        setIsDragging(false);
+        draggingRef.current = false;
+
+        // Constrain bounds if needed, or simply let it flow back to loop?
+        // To ensure infinite loop stability, we should probably check bounds here too.
+        if (trackRef.current) {
+            const trackWidth = trackRef.current.scrollWidth;
+            const halfWidth = trackWidth / 2;
+            // If dragged too far left
+            if (Math.abs(translateRef.current) >= halfWidth) {
+                translateRef.current = translateRef.current % halfWidth;
+            }
+            // If dragged too far right (positive)
+            if (translateRef.current > 0) {
+                translateRef.current = -halfWidth + translateRef.current;
+            }
+        }
+
+        // Restart loop
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = requestAnimationFrame(animationLoop);
+    };
+
+
     useEffect(() => {
         // Scroll to top on mount
         window.scrollTo(0, 0);
@@ -82,8 +203,24 @@ const Home = () => {
     return (
         <>
             {/* Hero Section */}
-            <section id="home" className="hero">
+            <section id="home" className="hero" ref={heroRef} onMouseMove={handleHeroMouseMove}>
                 <div className="hero-background"></div>
+
+                {/* Interactive Camera Interface */}
+                <div className="camera-interface">
+                    <div className="camera-grid"></div>
+                    <div className="focus-rect">
+                        <div className="focus-corner top-left"></div>
+                        <div className="focus-corner top-right"></div>
+                        <div className="focus-corner bottom-left"></div>
+                        <div className="focus-corner bottom-right"></div>
+                    </div>
+                    <div className="camera-data top-left">ISO <span>800</span></div>
+                    <div className="camera-data top-right">RAW</div>
+                    <div className="camera-data bottom-left"><span>ƒ</span>/2.8</div>
+                    <div className="camera-data bottom-right">1/250</div>
+                </div>
+
                 <div className="hero-content">
                     <h1 className="hero-title">
                         <span className="hero-subtitle">Welcome to</span>
@@ -109,39 +246,33 @@ const Home = () => {
                         <p className="section-subtitle">A glimpse into our studio sessions</p>
                     </div>
 
-                    <div className="gallery-carousel-container">
-                        <div className="gallery-track">
+                    <div
+                        className="gallery-carousel-container"
+                        onMouseDown={handleDragStart}
+                        onMouseUp={handleDragEnd}
+                        onMouseLeave={handleDragEnd}
+                        onMouseMove={handleDragMove}
+                        onTouchStart={handleDragStart}
+                        onTouchEnd={handleDragEnd}
+                        onTouchMove={handleDragMove}
+                        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                    >
+                        <div
+                            className="gallery-track"
+                            ref={trackRef}
+                            style={{
+                                transform: `translateX(${currentTranslate}px)`,
+                                animation: 'none', // Override CSS animation
+                                width: 'max-content',
+                                display: 'flex',
+                                gap: 'var(--spacing-md)'
+                            }}
+                        >
                             {/* Render items twice for infinite scroll effect */}
-                            {[
-                                { src: '/gallery/solo1.webp', category: 'Portrait', title: 'Solo Session' },
-                                { src: '/gallery/duo1.webp', category: 'Couple', title: 'Duo Shoot' },
-                                { src: '/gallery/group1.webp', category: 'Group', title: 'Barkada' },
-                                { src: '/gallery/solo2.webp', category: 'Portrait', title: 'Creative Solo' },
-                                { src: '/gallery/duo2.webp', category: 'Couple', title: 'Partner in Crime' },
-                                { src: '/gallery/group2.webp', category: 'Group', title: 'Squad Goals' },
-                                { src: '/gallery/solo3.webp', category: 'Portrait', title: 'Profile Update' },
-                                { src: '/gallery/duo3.webp', category: 'Couple', title: 'Anniversary' },
-                                { src: '/gallery/group3.webp', category: 'Group', title: 'Family Love' },
-                                { src: '/gallery/solo4.webp', category: 'Portrait', title: 'Self Love' },
-                                { src: '/gallery/duo4.webp', category: 'Couple', title: 'Besties' },
-                                { src: '/gallery/group4.webp', category: 'Group', title: 'Team Bonding' },
-                                // Duplicates for seamless loop
-                                { src: '/gallery/solo1.webp', category: 'Portrait', title: 'Solo Session' },
-                                { src: '/gallery/duo1.webp', category: 'Couple', title: 'Duo Shoot' },
-                                { src: '/gallery/group1.webp', category: 'Group', title: 'Barkada' },
-                                { src: '/gallery/solo2.webp', category: 'Portrait', title: 'Creative Solo' },
-                                { src: '/gallery/duo2.webp', category: 'Couple', title: 'Partner in Crime' },
-                                { src: '/gallery/group2.webp', category: 'Group', title: 'Squad Goals' },
-                                { src: '/gallery/solo3.webp', category: 'Portrait', title: 'Profile Update' },
-                                { src: '/gallery/duo3.webp', category: 'Couple', title: 'Anniversary' },
-                                { src: '/gallery/group3.webp', category: 'Group', title: 'Family Love' },
-                                { src: '/gallery/solo4.webp', category: 'Portrait', title: 'Self Love' },
-                                { src: '/gallery/duo4.webp', category: 'Couple', title: 'Besties' },
-                                { src: '/gallery/group4.webp', category: 'Group', title: 'Team Bonding' },
-                            ].map((item, index) => (
+                            {[...galleryItems, ...galleryItems].map((item, index) => (
                                 <div className="gallery-card" key={index}>
                                     <div className="gallery-card-inner">
-                                        <img src={item.src} alt={item.title} loading="lazy" />
+                                        <img src={item.src} alt={item.title} loading="lazy" draggable={false} />
                                         <div className="gallery-overlay">
                                             <div className="gallery-info">
                                                 <div className="gallery-category">{item.category}</div>
@@ -155,7 +286,7 @@ const Home = () => {
                     </div>
 
                     <div style={{ textAlign: 'center', marginTop: 'var(--spacing-xl)' }}>
-                        <Link to="/gallery" className="btn btn-outline btn-large">View Full Gallery</Link>
+                        <Link to="/gallery" className="btn btn-primary btn-large">View Full Gallery</Link>
                     </div>
                 </div>
             </section>
@@ -227,7 +358,7 @@ const Home = () => {
                     </div>
 
                     <div style={{ textAlign: 'center', marginTop: 'var(--spacing-xl)' }}>
-                        <Link to="/services" className="btn btn-outline btn-large">See All Services</Link>
+                        <Link to="/services" className="btn btn-primary btn-large">See All Services</Link>
                     </div>
                 </div>
             </section>

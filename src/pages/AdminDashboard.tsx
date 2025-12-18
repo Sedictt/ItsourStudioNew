@@ -203,12 +203,23 @@ const AdminDashboard = () => {
 
     // Gallery States
     const [showGalleryModal, setShowGalleryModal] = useState(false);
-    const [galleryFile, setGalleryFile] = useState<File | null>(null);
-    const [galleryPreview, setGalleryPreview] = useState<string | null>(null);
+    const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+    const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
     const [galleryForm, setGalleryForm] = useState({
         category: 'solo',
         alt: ''
     });
+
+    // Content Image Upload States
+    const [aboutImageFile, setAboutImageFile] = useState<File | null>(null);
+    const [aboutImagePreview, setAboutImagePreview] = useState<string>('');
+    const [seasonalImageFile, setSeasonalImageFile] = useState<File | null>(null);
+    const [seasonalImagePreview, setSeasonalImagePreview] = useState<string>('');
+    const [contentUploading, setContentUploading] = useState<'about' | 'seasonal' | null>(null);
+    const [activeContentTab, setActiveContentTab] = useState<'promoBanner' | 'seasonalPromo' | 'about' | 'footer'>('promoBanner');
+    const [replacingImage, setReplacingImage] = useState<{ about: boolean; seasonal: boolean }>({ about: false, seasonal: false });
 
     // Calendar State
     const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -520,6 +531,117 @@ const AdminDashboard = () => {
         }));
     };
 
+    // Content Image Upload Handlers
+    const handleContentImageChange = (e: React.ChangeEvent<HTMLInputElement>, section: 'about' | 'seasonal') => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 15 * 1024 * 1024) {
+            showToast('error', 'File too large', 'Image must be less than 15MB');
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(file);
+
+        if (section === 'about') {
+            if (aboutImagePreview) URL.revokeObjectURL(aboutImagePreview);
+            setAboutImageFile(file);
+            setAboutImagePreview(previewUrl);
+        } else {
+            if (seasonalImagePreview) URL.revokeObjectURL(seasonalImagePreview);
+            setSeasonalImageFile(file);
+            setSeasonalImagePreview(previewUrl);
+        }
+    };
+
+    const handleContentImageDrop = (e: React.DragEvent<HTMLDivElement>, section: 'about' | 'seasonal') => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const file = e.dataTransfer.files?.[0];
+        if (!file || !file.type.startsWith('image/')) {
+            showToast('error', 'Invalid file', 'Please drop an image file');
+            return;
+        }
+
+        if (file.size > 15 * 1024 * 1024) {
+            showToast('error', 'File too large', 'Image must be less than 15MB');
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(file);
+
+        if (section === 'about') {
+            if (aboutImagePreview) URL.revokeObjectURL(aboutImagePreview);
+            setAboutImageFile(file);
+            setAboutImagePreview(previewUrl);
+        } else {
+            if (seasonalImagePreview) URL.revokeObjectURL(seasonalImagePreview);
+            setSeasonalImageFile(file);
+            setSeasonalImagePreview(previewUrl);
+        }
+    };
+
+    const handleRemoveCurrentContentImage = (section: 'about' | 'seasonal') => {
+        if (section === 'about') {
+            handleContentChange('about', 'imageUrl', '');
+        } else {
+            handleContentChange('seasonalPromo', 'imageUrl', '');
+        }
+    };
+
+    const handleUploadContentImage = async (section: 'about' | 'seasonal') => {
+        const file = section === 'about' ? aboutImageFile : seasonalImageFile;
+        if (!file) {
+            showToast('error', 'No image', 'Please select an image first');
+            return;
+        }
+
+        setContentUploading(section);
+
+        try {
+            // Compress image before upload
+            const compressedBlob = await compressImage(file);
+
+            // Upload to Firebase Storage
+            const storageRef = ref(storage, `content/${section}_${Date.now()}_${file.name}`);
+            await uploadBytes(storageRef, compressedBlob);
+            const imageUrl = await getDownloadURL(storageRef);
+
+            // Update content state with new URL
+            if (section === 'about') {
+                handleContentChange('about', 'imageUrl', imageUrl);
+                setAboutImageFile(null);
+                setAboutImagePreview('');
+                setReplacingImage(prev => ({ ...prev, about: false }));
+            } else {
+                handleContentChange('seasonalPromo', 'imageUrl', imageUrl);
+                setSeasonalImageFile(null);
+                setSeasonalImagePreview('');
+                setReplacingImage(prev => ({ ...prev, seasonal: false }));
+            }
+
+            showToast('success', 'Image Uploaded', 'Image uploaded successfully. Remember to save the section.');
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            showToast('error', 'Upload Failed', 'Failed to upload image');
+        } finally {
+            setContentUploading(null);
+        }
+    };
+
+    const removeContentImage = (section: 'about' | 'seasonal') => {
+        if (section === 'about') {
+            if (aboutImagePreview) URL.revokeObjectURL(aboutImagePreview);
+            setAboutImageFile(null);
+            setAboutImagePreview('');
+        } else {
+            if (seasonalImagePreview) URL.revokeObjectURL(seasonalImagePreview);
+            setSeasonalImageFile(null);
+            setSeasonalImagePreview('');
+        }
+    };
+
     // User Management Functions
     const resetUserForm = () => {
         setUserForm({
@@ -582,58 +704,100 @@ const AdminDashboard = () => {
     };
 
     // Gallery Functions
-    const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            if (file.size > 15 * 1024 * 1024) {
-                showToast('error', 'File too large', 'Limit is 15MB');
-                return;
-            }
-            setGalleryFile(file);
-            const url = URL.createObjectURL(file);
-            setGalleryPreview(url);
+    const handleGalleryFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const files = Array.from(e.target.files);
+            const validFiles: File[] = [];
+
+            files.forEach(file => {
+                if (file.size > 15 * 1024 * 1024) {
+                    showToast('error', 'File too large', `${file.name} exceeds 15MB`);
+                } else {
+                    validFiles.push(file);
+                }
+            });
+
+            setGalleryFiles(prev => [...prev, ...validFiles]);
+            const newPreviews = validFiles.map(file => URL.createObjectURL(file));
+            setGalleryPreviews(prev => [...prev, ...newPreviews]);
         }
     };
 
-
+    const removeGalleryFile = (index: number) => {
+        setGalleryFiles(prev => prev.filter((_, i) => i !== index));
+        setGalleryPreviews(prev => {
+            const newPreviews = [...prev];
+            if (newPreviews[index]) {
+                URL.revokeObjectURL(newPreviews[index]);
+            }
+            newPreviews.splice(index, 1);
+            return newPreviews;
+        });
+    };
 
     const handleSaveGalleryItem = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!galleryFile) {
-            showToast('error', 'Missing Image', 'Please upload an image first');
+        if (galleryFiles.length === 0) {
+            showToast('error', 'Missing Images', 'Please select at least one image');
             return;
         }
 
+        setUploading(true);
+        setUploadProgress({ current: 0, total: galleryFiles.length });
+
+        let successCount = 0;
+        let failCount = 0;
+
         try {
-            // Optimize image before upload to save space (Free Tier friendly)
-            showToast('success', 'Optimizing', 'Compressing image...');
-            const compressedBlob = await compressImage(galleryFile);
+            for (let i = 0; i < galleryFiles.length; i++) {
+                const file = galleryFiles[i];
+                try {
+                    // Optimize image before upload
+                    const compressedBlob = await compressImage(file);
 
-            // 1. Upload Image to Firebase Storage
-            const storageRef = ref(storage, `gallery/${Date.now()}_${galleryFile.name}`);
-            await uploadBytes(storageRef, compressedBlob);
-            const imageUrl = await getDownloadURL(storageRef);
+                    // 1. Upload Image to Firebase Storage
+                    const storageRef = ref(storage, `gallery/${Date.now()}_${file.name}`);
+                    await uploadBytes(storageRef, compressedBlob);
+                    const imageUrl = await getDownloadURL(storageRef);
 
-            // 2. Save to Firestore
-            await addDoc(collection(db, 'gallery'), {
-                src: imageUrl,
-                category: galleryForm.category,
-                alt: galleryForm.alt,
-                createdAt: serverTimestamp()
-            });
+                    // 2. Save to Firestore
+                    await addDoc(collection(db, 'gallery'), {
+                        src: imageUrl,
+                        category: galleryForm.category,
+                        alt: galleryForm.alt,
+                        createdAt: serverTimestamp()
+                    });
+                    successCount++;
+                } catch (error) {
+                    console.error(`Error uploading ${file.name}:`, error);
+                    failCount++;
+                }
+                setUploadProgress(prev => ({ ...prev, current: i + 1 }));
+            }
 
-            showToast('success', 'Uploaded', 'Image added to gallery');
+            if (successCount > 0) {
+                showToast('success', 'Upload Complete', `${successCount} images added to gallery`);
+            }
+            if (failCount > 0) {
+                showToast('error', 'Upload Issues', `${failCount} images failed to upload`);
+            }
 
             // Reset
-            setGalleryFile(null);
-            setGalleryPreview(null);
+            setGalleryFiles([]);
+            setGalleryPreviews(prev => {
+                prev.forEach(url => URL.revokeObjectURL(url));
+                return [];
+            });
             setGalleryForm({ category: 'solo', alt: '' });
             setShowGalleryModal(false);
 
         } catch (error) {
-            console.error("Error upload to gallery:", error);
-            showToast('error', 'Error', 'Failed to upload image');
+            console.error("Error in bulk upload process:", error);
+            showToast('error', 'Error', 'An unexpected error occurred during upload');
+        } finally {
+            setUploading(false);
+            setUploadProgress({ current: 0, total: 0 });
         }
     };
 
@@ -1274,255 +1438,505 @@ const AdminDashboard = () => {
                         <div className="bookings-header">
                             <h3>Content Management</h3>
                         </div>
-                        <div style={{ padding: '2rem' }}>
-                            {/* Promo Banner Edit */}
-                            <div className="content-group" style={{ marginBottom: '3rem' }}>
-                                <h4 style={{ marginBottom: '1.5rem', borderBottom: '2px solid #eee', paddingBottom: '0.5rem' }}>Promotional Banner</h4>
-                                <div style={{ display: 'grid', gap: '1.5rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
-                                        <label className="switch">
-                                            <input
-                                                type="checkbox"
-                                                checked={content.promoBanner.isVisible}
-                                                onChange={(e) => handleContentChange('promoBanner', 'isVisible', e.target.checked)}
-                                            />
-                                            <span className="slider round"></span>
-                                        </label>
-                                        <span style={{ fontWeight: 500 }}>
-                                            {content.promoBanner.isVisible ? 'Active' : 'Inactive'}
-                                        </span>
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
-                                        <div>
-                                            <label className="form-label">Banner Text</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                placeholder="e.g. Holiday Special! Get 20% OFF"
-                                                value={content.promoBanner.text}
-                                                onChange={(e) => handleContentChange('promoBanner', 'text', e.target.value)}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="form-label">Promo Code (Optional)</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                placeholder="e.g. HOLIDAY20"
-                                                value={content.promoBanner.promoCode}
-                                                onChange={(e) => handleContentChange('promoBanner', 'promoCode', e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                    <button
-                                        className="btn btn-primary"
-                                        style={{ width: 'fit-content' }}
-                                        onClick={() => handleSaveContent('promoBanner')}
-                                    >
-                                        Save Banner Settings
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Seasonal Promo Edit */}
-                            <div className="content-group" style={{ marginBottom: '3rem' }}>
-                                <h4 style={{ marginBottom: '1.5rem', borderBottom: '2px solid #eee', paddingBottom: '0.5rem' }}>Seasonal / Limited Time Section</h4>
-                                <div style={{ display: 'grid', gap: '1.5rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
-                                        <label className="switch">
-                                            <input
-                                                type="checkbox"
-                                                checked={content.seasonalPromo.isActive}
-                                                onChange={(e) => handleContentChange('seasonalPromo', 'isActive', e.target.checked)}
-                                            />
-                                            <span className="slider round"></span>
-                                        </label>
-                                        <span style={{ fontWeight: 500 }}>
-                                            {content.seasonalPromo.isActive ? 'Section Visible' : 'Section Hidden'}
-                                        </span>
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                                        <div>
-                                            <label className="form-label">Title</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={content.seasonalPromo.title}
-                                                onChange={(e) => handleContentChange('seasonalPromo', 'title', e.target.value)}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="form-label">Tag (Badge)</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={content.seasonalPromo.tag}
-                                                onChange={(e) => handleContentChange('seasonalPromo', 'tag', e.target.value)}
-                                            />
-                                        </div>
-                                        <div style={{ gridColumn: '1 / -1' }}>
-                                            <label className="form-label">Description</label>
-                                            <textarea
-                                                className="form-input"
-                                                rows={3}
-                                                value={content.seasonalPromo.description}
-                                                onChange={(e) => handleContentChange('seasonalPromo', 'description', e.target.value)}
-                                            ></textarea>
-                                        </div>
-                                        <div>
-                                            <label className="form-label">Price</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={content.seasonalPromo.price}
-                                                onChange={(e) => handleContentChange('seasonalPromo', 'price', e.target.value)}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="form-label">Original Price (Strike-through)</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={content.seasonalPromo.originalPrice}
-                                                onChange={(e) => handleContentChange('seasonalPromo', 'originalPrice', e.target.value)}
-                                            />
-                                        </div>
-                                        <div style={{ gridColumn: '1 / -1' }}>
-                                            <label className="form-label">Image URL</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={content.seasonalPromo.imageUrl}
-                                                onChange={(e) => handleContentChange('seasonalPromo', 'imageUrl', e.target.value)}
-                                            />
-                                        </div>
-                                        <div style={{ gridColumn: '1 / -1' }}>
-                                            <label className="form-label">Features (Comma separated)</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={content.seasonalPromo.features.join(', ')}
-                                                onChange={(e) => handleContentChange('seasonalPromo', 'features', e.target.value.split(',').map(s => s.trim()))}
-                                            />
-                                        </div>
-                                    </div>
-                                    <button
-                                        className="btn btn-primary"
-                                        style={{ width: 'fit-content' }}
-                                        onClick={() => handleSaveContent('seasonalPromo')}
-                                    >
-                                        Save Seasonal Section
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* About Section Edit */}
-                            <div className="content-group" style={{ marginBottom: '3rem' }}>
-                                <h4 style={{ marginBottom: '1.5rem', borderBottom: '2px solid #eee', paddingBottom: '0.5rem' }}>About Section</h4>
-                                <div style={{ display: 'grid', gap: '1.5rem' }}>
-                                    <div>
-                                        <label className="form-label">Section Title</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={content.about.title}
-                                            onChange={(e) => handleContentChange('about', 'title', e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="form-label">Image URL</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={content.about.imageUrl}
-                                            onChange={(e) => handleContentChange('about', 'imageUrl', e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="form-label">Description Paragraph 1</label>
-                                        <textarea
-                                            className="form-input"
-                                            rows={4}
-                                            value={content.about.description1}
-                                            onChange={(e) => handleContentChange('about', 'description1', e.target.value)}
-                                        ></textarea>
-                                    </div>
-                                    <div>
-                                        <label className="form-label">Description Paragraph 2</label>
-                                        <textarea
-                                            className="form-input"
-                                            rows={4}
-                                            value={content.about.description2}
-                                            onChange={(e) => handleContentChange('about', 'description2', e.target.value)}
-                                        ></textarea>
-                                    </div>
-                                    <button
-                                        className="btn btn-primary"
-                                        style={{ width: 'fit-content' }}
-                                        onClick={() => handleSaveContent('about')}
-                                    >
-                                        Save About Section
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Footer Section Edit */}
-                            <div className="content-group">
-                                <h4 style={{ marginBottom: '1.5rem', borderBottom: '2px solid #eee', paddingBottom: '0.5rem' }}>Footer Information</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                                    <div style={{ gridColumn: '1 / -1' }}>
-                                        <label className="form-label">Brand Slogan</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={content.footer.brandText}
-                                            onChange={(e) => handleContentChange('footer', 'brandText', e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="form-label">Contact Email</label>
-                                        <input
-                                            type="email"
-                                            className="form-input"
-                                            value={content.footer.email}
-                                            onChange={(e) => handleContentChange('footer', 'email', e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="form-label">Facebook URL</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={content.footer.facebook}
-                                            onChange={(e) => handleContentChange('footer', 'facebook', e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="form-label">Instagram URL</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={content.footer.instagram}
-                                            onChange={(e) => handleContentChange('footer', 'instagram', e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="form-label">Pinterest URL</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={content.footer.pinterest}
-                                            onChange={(e) => handleContentChange('footer', 'pinterest', e.target.value)}
-                                        />
-                                    </div>
-                                </div>
+                        <div className="content-layout">
+                            {/* Content Sidebar */}
+                            <div className="content-sidebar">
                                 <button
-                                    className="btn btn-primary"
-                                    style={{ marginTop: '1.5rem' }}
-                                    onClick={() => handleSaveContent('footer')}
+                                    className={`content-nav-btn ${activeContentTab === 'promoBanner' ? 'active' : ''}`}
+                                    onClick={() => setActiveContentTab('promoBanner')}
                                 >
-                                    Save Footer Info
+                                    <div className="nav-icon">📢</div>
+                                    <div className="nav-label">
+                                        <span>Promo Banner</span>
+                                        <small>Top announcement bar</small>
+                                    </div>
+                                    <div className="nav-arrow">›</div>
                                 </button>
+
+                                <button
+                                    className={`content-nav-btn ${activeContentTab === 'seasonalPromo' ? 'active' : ''}`}
+                                    onClick={() => setActiveContentTab('seasonalPromo')}
+                                >
+                                    <div className="nav-icon">🎄</div>
+                                    <div className="nav-label">
+                                        <span>Seasonal Section</span>
+                                        <small>Limited time offers</small>
+                                    </div>
+                                    <div className="nav-arrow">›</div>
+                                </button>
+
+                                <button
+                                    className={`content-nav-btn ${activeContentTab === 'about' ? 'active' : ''}`}
+                                    onClick={() => setActiveContentTab('about')}
+                                >
+                                    <div className="nav-icon">📖</div>
+                                    <div className="nav-label">
+                                        <span>About Section</span>
+                                        <small>Story & details</small>
+                                    </div>
+                                    <div className="nav-arrow">›</div>
+                                </button>
+
+                                <button
+                                    className={`content-nav-btn ${activeContentTab === 'footer' ? 'active' : ''}`}
+                                    onClick={() => setActiveContentTab('footer')}
+                                >
+                                    <div className="nav-icon">🦶</div>
+                                    <div className="nav-label">
+                                        <span>Footer Info</span>
+                                        <small>Contact & links</small>
+                                    </div>
+                                    <div className="nav-arrow">›</div>
+                                </button>
+                            </div>
+
+                            {/* Content Main Area */}
+                            <div className="content-main">
+                                {/* Promo Banner Edit */}
+                                {activeContentTab === 'promoBanner' && (
+                                    <div className="content-card">
+                                        <div className="card-header">
+                                            <h4>Promotional Banner</h4>
+                                            <p>Manage the banner that appears at the top of the homepage.</p>
+                                        </div>
+                                        <div className="card-body">
+                                            <div className="status-toggle-container">
+                                                <label className="switch">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={content.promoBanner.isVisible}
+                                                        onChange={(e) => handleContentChange('promoBanner', 'isVisible', e.target.checked)}
+                                                    />
+                                                    <span className="slider round"></span>
+                                                </label>
+                                                <div className="status-label">
+                                                    <span>Banner Status</span>
+                                                    <small>{content.promoBanner.isVisible ? 'Visible on homepage' : 'Hidden from homepage'}</small>
+                                                </div>
+                                            </div>
+
+                                            <div className="form-grid">
+                                                <div style={{ gridColumn: '1 / -1' }}>
+                                                    <label className="form-label">Banner Text</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        placeholder="e.g. Holiday Special! Get 20% OFF"
+                                                        value={content.promoBanner.text}
+                                                        onChange={(e) => handleContentChange('promoBanner', 'text', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div style={{ gridColumn: '1 / -1' }}>
+                                                    <label className="form-label">Promo Code (Optional)</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        placeholder="e.g. HOLIDAY20"
+                                                        value={content.promoBanner.promoCode}
+                                                        onChange={(e) => handleContentChange('promoBanner', 'promoCode', e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="card-actions">
+                                                <button
+                                                    className="btn btn-primary"
+                                                    onClick={() => handleSaveContent('promoBanner')}
+                                                >
+                                                    Save Changes
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Seasonal Promo Edit */}
+                                {activeContentTab === 'seasonalPromo' && (
+                                    <div className="content-card">
+                                        <div className="card-header">
+                                            <h4>Seasonal / Limited Time Section</h4>
+                                            <p>Highlight a special package or event on your homepage.</p>
+                                        </div>
+                                        <div className="card-body">
+                                            <div className="status-toggle-container">
+                                                <label className="switch">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={content.seasonalPromo.isActive}
+                                                        onChange={(e) => handleContentChange('seasonalPromo', 'isActive', e.target.checked)}
+                                                    />
+                                                    <span className="slider round"></span>
+                                                </label>
+                                                <div className="status-label">
+                                                    <span>Section Status</span>
+                                                    <small>{content.seasonalPromo.isActive ? 'Section is visible' : 'Section is hidden'}</small>
+                                                </div>
+                                            </div>
+
+                                            <div className="form-grid two-col">
+                                                <div>
+                                                    <label className="form-label">Title</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={content.seasonalPromo.title}
+                                                        onChange={(e) => handleContentChange('seasonalPromo', 'title', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="form-label">Tag (Badge)</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={content.seasonalPromo.tag}
+                                                        onChange={(e) => handleContentChange('seasonalPromo', 'tag', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="full-width">
+                                                    <label className="form-label">Description</label>
+                                                    <textarea
+                                                        className="form-input"
+                                                        rows={3}
+                                                        value={content.seasonalPromo.description}
+                                                        onChange={(e) => handleContentChange('seasonalPromo', 'description', e.target.value)}
+                                                    ></textarea>
+                                                </div>
+                                                <div>
+                                                    <label className="form-label">Price</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={content.seasonalPromo.price}
+                                                        onChange={(e) => handleContentChange('seasonalPromo', 'price', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="form-label">Original Price</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={content.seasonalPromo.originalPrice}
+                                                        onChange={(e) => handleContentChange('seasonalPromo', 'originalPrice', e.target.value)}
+                                                    />
+                                                </div>
+
+                                                <div className="full-width">
+                                                    <label className="form-label">Promo Image</label>
+                                                    {content.seasonalPromo.imageUrl && !seasonalImageFile && !replacingImage.seasonal ? (
+                                                        <div className="current-image-preview">
+                                                            <div className="preview-label">Current Image</div>
+                                                            <img
+                                                                src={content.seasonalPromo.imageUrl}
+                                                                alt="Current promo"
+                                                            />
+                                                            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-outline"
+                                                                    onClick={() => setReplacingImage(prev => ({ ...prev, seasonal: true }))}
+                                                                >
+                                                                    Replace Image
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-outline"
+                                                                    style={{ borderColor: '#ef4444', color: '#ef4444' }}
+                                                                    onClick={() => handleRemoveCurrentContentImage('seasonal')}
+                                                                >
+                                                                    Remove Image
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div
+                                                                className={`drop-zone ${contentUploading === 'seasonal' ? 'disabled' : ''} ${seasonalImagePreview ? 'has-preview' : ''}`}
+                                                                onClick={() => !contentUploading && document.getElementById('seasonal-image-upload')?.click()}
+                                                                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                                onDrop={(e) => handleContentImageDrop(e, 'seasonal')}
+                                                            >
+                                                                {seasonalImagePreview ? (
+                                                                    <div className="preview-container">
+                                                                        <img src={seasonalImagePreview} alt="Preview" />
+                                                                        <button
+                                                                            type="button"
+                                                                            className="remove-preview-btn"
+                                                                            onClick={(e) => { e.stopPropagation(); removeContentImage('seasonal'); }}
+                                                                        >
+                                                                            ×
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="drop-placeholder">
+                                                                        <div className="icon">📸</div>
+                                                                        <p>Drag & drop image here or click to upload</p>
+                                                                        <small>Max 15MB</small>
+                                                                    </div>
+                                                                )}
+                                                                <input
+                                                                    id="seasonal-image-upload"
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    disabled={contentUploading === 'seasonal'}
+                                                                    style={{ display: 'none' }}
+                                                                    onChange={(e) => handleContentImageChange(e, 'seasonal')}
+                                                                />
+                                                                {replacingImage.seasonal && !seasonalImagePreview && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-outline"
+                                                                        style={{ marginTop: '1rem', padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                                                                        onClick={(e) => { e.stopPropagation(); setReplacingImage(prev => ({ ...prev, seasonal: false })); }}
+                                                                    >
+                                                                        Cancel Replace
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {seasonalImageFile && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-secondary"
+                                                                    style={{ marginTop: '1rem', width: '100%' }}
+                                                                    onClick={() => handleUploadContentImage('seasonal')}
+                                                                    disabled={contentUploading === 'seasonal'}
+                                                                >
+                                                                    {contentUploading === 'seasonal' ? 'Uploading...' : 'Upload Image'}
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                <div className="full-width">
+                                                    <label className="form-label">Features (Comma separated)</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={content.seasonalPromo.features.join(', ')}
+                                                        onChange={(e) => handleContentChange('seasonalPromo', 'features', e.target.value.split(',').map(s => s.trim()))}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="card-actions">
+                                                <button
+                                                    className="btn btn-primary"
+                                                    onClick={() => handleSaveContent('seasonalPromo')}
+                                                >
+                                                    Save Changes
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* About Section Edit */}
+                                {activeContentTab === 'about' && (
+                                    <div className="content-card">
+                                        <div className="card-header">
+                                            <h4>About Section</h4>
+                                            <p>Edit the story and details shown in the About Us section.</p>
+                                        </div>
+                                        <div className="card-body">
+                                            <div className="form-grid">
+                                                <div className="full-width">
+                                                    <label className="form-label">Section Title</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={content.about.title}
+                                                        onChange={(e) => handleContentChange('about', 'title', e.target.value)}
+                                                    />
+                                                </div>
+
+                                                <div className="full-width">
+                                                    <label className="form-label">Section Image</label>
+                                                    {content.about.imageUrl && !aboutImageFile && !replacingImage.about ? (
+                                                        <div className="current-image-preview">
+                                                            <div className="preview-label">Current Image</div>
+                                                            <img
+                                                                src={content.about.imageUrl}
+                                                                alt="Current about"
+                                                            />
+                                                            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-outline"
+                                                                    onClick={() => setReplacingImage(prev => ({ ...prev, about: true }))}
+                                                                >
+                                                                    Replace Image
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-outline"
+                                                                    style={{ borderColor: '#ef4444', color: '#ef4444' }}
+                                                                    onClick={() => handleRemoveCurrentContentImage('about')}
+                                                                >
+                                                                    Remove Image
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div
+                                                                className={`drop-zone ${contentUploading === 'about' ? 'disabled' : ''} ${aboutImagePreview ? 'has-preview' : ''}`}
+                                                                onClick={() => !contentUploading && document.getElementById('about-image-upload')?.click()}
+                                                                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                                onDrop={(e) => handleContentImageDrop(e, 'about')}
+                                                            >
+                                                                {aboutImagePreview ? (
+                                                                    <div className="preview-container">
+                                                                        <img src={aboutImagePreview} alt="Preview" />
+                                                                        <button
+                                                                            type="button"
+                                                                            className="remove-preview-btn"
+                                                                            onClick={(e) => { e.stopPropagation(); removeContentImage('about'); }}
+                                                                        >
+                                                                            ×
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="drop-placeholder">
+                                                                        <div className="icon">📸</div>
+                                                                        <p>Drag & drop image here or click to upload</p>
+                                                                        <small>Max 15MB</small>
+                                                                    </div>
+                                                                )}
+                                                                <input
+                                                                    id="about-image-upload"
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    disabled={contentUploading === 'about'}
+                                                                    style={{ display: 'none' }}
+                                                                    onChange={(e) => handleContentImageChange(e, 'about')}
+                                                                />
+                                                                {replacingImage.about && !aboutImagePreview && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-outline"
+                                                                        style={{ marginTop: '1rem', padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                                                                        onClick={(e) => { e.stopPropagation(); setReplacingImage(prev => ({ ...prev, about: false })); }}
+                                                                    >
+                                                                        Cancel Replace
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {aboutImageFile && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-secondary"
+                                                                    style={{ marginTop: '1rem', width: '100%' }}
+                                                                    onClick={() => handleUploadContentImage('about')}
+                                                                    disabled={contentUploading === 'about'}
+                                                                >
+                                                                    {contentUploading === 'about' ? 'Uploading...' : 'Upload Image'}
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                <div className="full-width">
+                                                    <label className="form-label">Description Paragraph 1</label>
+                                                    <textarea
+                                                        className="form-input"
+                                                        rows={4}
+                                                        value={content.about.description1}
+                                                        onChange={(e) => handleContentChange('about', 'description1', e.target.value)}
+                                                    ></textarea>
+                                                </div>
+                                                <div className="full-width">
+                                                    <label className="form-label">Description Paragraph 2</label>
+                                                    <textarea
+                                                        className="form-input"
+                                                        rows={4}
+                                                        value={content.about.description2}
+                                                        onChange={(e) => handleContentChange('about', 'description2', e.target.value)}
+                                                    ></textarea>
+                                                </div>
+                                            </div>
+
+                                            <div className="card-actions">
+                                                <button
+                                                    className="btn btn-primary"
+                                                    onClick={() => handleSaveContent('about')}
+                                                >
+                                                    Save Changes
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Footer Section Edit */}
+                                {activeContentTab === 'footer' && (
+                                    <div className="content-card">
+                                        <div className="card-header">
+                                            <h4>Footer Information</h4>
+                                            <p>Update links and contact details in the site footer.</p>
+                                        </div>
+                                        <div className="card-body">
+                                            <div className="form-grid two-col">
+                                                <div className="full-width">
+                                                    <label className="form-label">Brand Slogan</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={content.footer.brandText}
+                                                        onChange={(e) => handleContentChange('footer', 'brandText', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="form-label">Contact Email</label>
+                                                    <input
+                                                        type="email"
+                                                        className="form-input"
+                                                        value={content.footer.email}
+                                                        onChange={(e) => handleContentChange('footer', 'email', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="form-label">Facebook URL</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={content.footer.facebook}
+                                                        onChange={(e) => handleContentChange('footer', 'facebook', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="form-label">Instagram URL</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={content.footer.instagram}
+                                                        onChange={(e) => handleContentChange('footer', 'instagram', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="form-label">Pinterest URL</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        value={content.footer.pinterest}
+                                                        onChange={(e) => handleContentChange('footer', 'pinterest', e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="card-actions">
+                                                <button
+                                                    className="btn btn-primary"
+                                                    onClick={() => handleSaveContent('footer')}
+                                                >
+                                                    Save Changes
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -1684,46 +2098,127 @@ const AdminDashboard = () => {
 
 
                 {/* Gallery Upload Modal */}
-                <div className={`admin-modal-overlay ${showGalleryModal ? 'active' : ''}`} onClick={() => setShowGalleryModal(false)}>
-                    <div className="admin-modal-card" onClick={e => e.stopPropagation()}>
+                <div className={`admin-modal-overlay ${showGalleryModal ? 'active' : ''}`} onClick={() => !uploading && setShowGalleryModal(false)}>
+                    <div className="admin-modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
                         <div className="modal-header">
-                            <h3 className="modal-title">Upload to Gallery</h3>
-                            <button className="btn-close" onClick={() => setShowGalleryModal(false)}>&times;</button>
+                            <h3 className="modal-title">Upload to Gallery {uploading && `(${uploadProgress.current}/${uploadProgress.total})`}</h3>
+                            {!uploading && <button className="btn-close" onClick={() => setShowGalleryModal(false)}>&times;</button>}
                         </div>
                         <form onSubmit={handleSaveGalleryItem}>
                             <div style={{ display: 'grid', gap: '1.5rem' }}>
+
+                                {/* File Drop/Select Area */}
                                 <div style={{
                                     border: '2px dashed #ddd',
                                     borderRadius: '8px',
                                     padding: '2rem',
                                     textAlign: 'center',
-                                    cursor: 'pointer',
+                                    cursor: uploading ? 'not-allowed' : 'pointer',
                                     position: 'relative',
                                     background: '#fafafa'
-                                }} onClick={() => document.getElementById('gallery-upload')?.click()}>
-                                    {galleryPreview ? (
-                                        <img src={galleryPreview} alt="Preview" style={{ maxHeight: '200px', maxWidth: '100%', borderRadius: '4px' }} />
-                                    ) : (
-                                        <div>
-                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                                            <p style={{ marginTop: '0.5rem', color: '#666' }}>Click to upload image (Max 15MB)</p>
-                                        </div>
-                                    )}
+                                }} onClick={() => !uploading && document.getElementById('gallery-upload')?.click()}>
+
+                                    <div>
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                        <p style={{ marginTop: '0.5rem', color: '#666' }}>
+                                            {uploading ? 'Uploading...' : 'Click to select images (Max 15MB each)'}
+                                        </p>
+                                    </div>
+
                                     <input
                                         id="gallery-upload"
                                         type="file"
                                         accept="image/*"
+                                        multiple
+                                        disabled={uploading}
                                         style={{ display: 'none' }}
-                                        onChange={handleGalleryFileChange}
+                                        onChange={handleGalleryFilesChange}
                                     />
                                 </div>
 
+                                {/* Previews Grid */}
+                                {galleryFiles.length > 0 && (
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+                                        gap: '0.5rem',
+                                        maxHeight: '200px',
+                                        overflowY: 'auto',
+                                        padding: '0.5rem',
+                                        background: '#f1f5f9',
+                                        borderRadius: '8px'
+                                    }}>
+                                        {galleryPreviews.map((src, index) => (
+                                            <div key={index} style={{ position: 'relative', aspectRatio: '1', borderRadius: '4px', overflow: 'hidden' }}>
+                                                <img src={src} alt={`preview ${index}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                {!uploading && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); removeGalleryFile(index); }}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '2px',
+                                                            right: '2px',
+                                                            background: 'rgba(0,0,0,0.6)',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '50%',
+                                                            width: '20px',
+                                                            height: '20px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            fontSize: '12px'
+                                                        }}
+                                                    >
+                                                        &times;
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Progress Bar */}
+                                {uploading && (
+                                    <div style={{ width: '100%', height: '8px', background: '#eee', borderRadius: '4px', overflow: 'hidden' }}>
+                                        <div style={{
+                                            width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
+                                            height: '100%',
+                                            background: '#3b82f6',
+                                            transition: 'width 0.3s ease'
+                                        }}></div>
+                                    </div>
+                                )}
+
                                 <div>
-                                    <label className="form-label">Category</label>
+                                    <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Category (for all)</label>
                                     <select
                                         className="form-input"
                                         value={galleryForm.category}
+                                        disabled={uploading}
                                         onChange={e => setGalleryForm({ ...galleryForm, category: e.target.value as any })}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem 1rem',
+                                            fontSize: '0.95rem',
+                                            border: '2px solid #e2e8f0',
+                                            borderRadius: '8px',
+                                            backgroundColor: '#ffffff',
+                                            color: '#1e293b',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            appearance: 'none',
+                                            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                                            backgroundRepeat: 'no-repeat',
+                                            backgroundPosition: 'right 1rem center',
+                                            backgroundSize: '16px',
+                                            paddingRight: '2.5rem',
+                                            fontWeight: '500'
+                                        }}
+                                        onFocus={(e) => e.target.style.borderColor = '#bf6a39'}
+                                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                                     >
                                         <option value="solo">Solo</option>
                                         <option value="duo">Duo</option>
@@ -1732,18 +2227,43 @@ const AdminDashboard = () => {
                                 </div>
 
                                 <div>
-                                    <label className="form-label">Title / Caption</label>
+                                    <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Title / Caption (Optional, for all)</label>
                                     <input
                                         type="text"
                                         className="form-input"
                                         placeholder="e.g. Summer Photoshoot"
                                         value={galleryForm.alt}
+                                        disabled={uploading}
                                         onChange={e => setGalleryForm({ ...galleryForm, alt: e.target.value })}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem 1rem',
+                                            fontSize: '0.95rem',
+                                            border: '2px solid #e2e8f0',
+                                            borderRadius: '8px',
+                                            backgroundColor: '#ffffff',
+                                            color: '#1e293b',
+                                            transition: 'all 0.2s ease',
+                                            fontWeight: '500'
+                                        }}
+                                        onFocus={(e) => {
+                                            e.target.style.borderColor = '#bf6a39';
+                                            e.target.style.boxShadow = '0 0 0 3px rgba(191, 106, 57, 0.1)';
+                                        }}
+                                        onBlur={(e) => {
+                                            e.target.style.borderColor = '#e2e8f0';
+                                            e.target.style.boxShadow = 'none';
+                                        }}
                                     />
                                 </div>
 
-                                <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                                    Upload and Save
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary"
+                                    style={{ width: '100%' }}
+                                    disabled={uploading || galleryFiles.length === 0}
+                                >
+                                    {uploading ? 'Uploading...' : `Upload ${galleryFiles.length > 0 ? galleryFiles.length + ' ' : ''}Images`}
                                 </button>
                             </div>
                         </form>

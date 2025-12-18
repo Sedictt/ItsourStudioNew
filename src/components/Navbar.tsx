@@ -50,7 +50,19 @@ const Navbar = () => {
                     <img src="/logo/LOGO_var1.png" alt="it's ouR Studio Logo" className="logo-image" />
                 </Link>
                 <div className={`nav-links ${mobileMenuOpen ? 'active' : ''}`}>
-                    <a href="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Home</a>
+                    {location.pathname === '/' ? (
+                        <button
+                            className="nav-link-btn active"
+                            onClick={() => {
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                setMobileMenuOpen(false);
+                            }}
+                        >
+                            Home
+                        </button>
+                    ) : (
+                        <Link to="/" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Home</Link>
+                    )}
 
                     {/* Gallery Link */}
                     {location.pathname === '/' ? (

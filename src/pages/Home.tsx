@@ -49,12 +49,23 @@ const Home = () => {
 
         // Handle state-based scrolling (from other pages)
         if (location.state?.scrollTo) {
-            const element = document.getElementById(location.state.scrollTo);
-            if (element) {
-                setTimeout(() => {
-                    element.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-            }
+            const targetSection = location.state.scrollTo;
+
+            const scrollToSection = () => {
+                const element = document.getElementById(targetSection);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    console.log(`Scrolled to section: ${targetSection}`);
+                } else {
+                    console.warn(`Section not found: ${targetSection}`);
+                }
+            };
+
+            // Increased delay to account for loading screen (600ms) + fade out (400ms) + buffer
+            setTimeout(scrollToSection, 1200);
+
+            // Fallback: try again after a bit more time in case content is still loading
+            setTimeout(scrollToSection, 1500);
         }
     }, [location]);
     const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);

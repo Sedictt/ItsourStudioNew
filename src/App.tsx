@@ -1,5 +1,5 @@
-import { type ReactElement } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { type ReactElement, useState, useEffect, useCallback, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -19,10 +19,20 @@ const ProtectedRoute = ({ children }: { children: ReactElement }) => {
 
 import ScrollToTop from './components/ScrollToTop';
 import BackToTop from './components/BackToTop';
+import LoadingScreen from './components/LoadingScreen';
 
-const AppContent = () => {
+const AppContent = ({ onRouteChange }: { onRouteChange: () => void }) => {
     const location = useLocation();
     const isAdminRoute = location.pathname.startsWith('/admin');
+    const prevPathnameRef = useRef(location.pathname);
+
+    useEffect(() => {
+        // Only trigger loading if pathname actually changed
+        if (prevPathnameRef.current !== location.pathname) {
+            onRouteChange();
+            prevPathnameRef.current = location.pathname;
+        }
+    }, [location.pathname, onRouteChange]);
 
     return (
         <div className="app-container">
@@ -59,10 +69,28 @@ const AppContent = () => {
 };
 
 function App() {
+    const [isLoading, setIsLoading] = useState(true);
+    const isInitialLoadRef = useRef(true);
+
+    const handleRouteChange = useCallback(() => {
+        if (!isInitialLoadRef.current) {
+            // Show loading screen for page transitions
+            setIsLoading(true);
+        }
+    }, []);
+
+    const handleLoadComplete = useCallback(() => {
+        setIsLoading(false);
+        if (isInitialLoadRef.current) {
+            isInitialLoadRef.current = false;
+        }
+    }, []);
+
     return (
         <BookingProvider>
             <Router>
-                <AppContent />
+                {isLoading && <LoadingScreen onLoadComplete={handleLoadComplete} isPageTransition={!isInitialLoadRef.current} />}
+                <AppContent onRouteChange={handleRouteChange} />
             </Router>
         </BookingProvider>
     );

@@ -8,6 +8,7 @@ import Gallery from './pages/Gallery';
 import EmailTest from './pages/EmailTest';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLogin from './pages/AdminLogin';
+import AdminDownload from './pages/AdminDownload';
 
 import { BookingProvider } from './context/BookingContext';
 import BookingModal from './components/BookingModal';
@@ -45,6 +46,7 @@ const AppContent = ({ onRouteChange }: { onRouteChange: () => void }) => {
                 <Route path="/gallery" element={<Gallery />} />
                 <Route path="/email-test" element={<EmailTest />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/admin/download" element={<AdminDownload />} />
 
                 {/* Redirects for hash links that might be interpreted as routes */}
                 <Route path="/about" element={<Navigate to="/" replace state={{ scrollTo: 'about' }} />} />

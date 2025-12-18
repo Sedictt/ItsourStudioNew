@@ -1,8 +1,8 @@
-version: 0.0.0
+version: 1.0.0
 files:
-  - url: Its-Our-Studio-Admin-Setup-0.0.0.exe
-    sha512: Cu+OKUpSJGTGTBkUdVxne46D/6ShmB1pX72JDlbmKAyAZD6+OiycLe1l0DKAXYWWguMW+3X40hI5rWXEr5YZOw==
-    size: 111670675
-path: Its-Our-Studio-Admin-Setup-0.0.0.exe
-sha512: Cu+OKUpSJGTGTBkUdVxne46D/6ShmB1pX72JDlbmKAyAZD6+OiycLe1l0DKAXYWWguMW+3X40hI5rWXEr5YZOw==
-releaseDate: '2025-12-08T12:58:56.552Z'
+  - url: Its-Our-Studio-Admin-Setup-1.0.0.exe
+    sha512: 2Muc3z1hPm80q4sK/ZqWgNmaqqFN1B2mVegVQ/5391pQJVQH03wPryD6JkBTmAzQZ1bgiFH3GAjVxTApu3QxbQ==
+    size: 111680822
+path: Its-Our-Studio-Admin-Setup-1.0.0.exe
+sha512: 2Muc3z1hPm80q4sK/ZqWgNmaqqFN1B2mVegVQ/5391pQJVQH03wPryD6JkBTmAzQZ1bgiFH3GAjVxTApu3QxbQ==
+releaseDate: '2025-12-18T09:54:01.143Z'

@@ -1868,3 +1868,432 @@ textarea:focus {
     transform: none;
     box-shadow: none;
 }
+
+/* ==================================================================
+   MOBILE RESPONSIVENESS (320px - 640px)
+   ================================================================== */
+
+@media (max-width: 640px) {
+
+    /* Full Screen Modal Override */
+    .modal-overlay {
+        padding: 0 !important;
+        align-items: flex-start !important;
+        background: white !important;
+    }
+
+    .modal-content.booking-modal {
+        width: 100% !important;
+        height: 100% !important;
+        min-width: 100% !important;
+        max-width: none !important;
+        max-height: 100svh !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        display: flex;
+        flex-direction: column;
+        margin: 0 !important;
+    }
+
+    .modal-close {
+        top: 1rem;
+        right: 1rem;
+        z-index: 50;
+        background: #f1f5f9;
+        color: #64748b;
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Header Adjustments - More Compact */
+    .booking-modal-header {
+        padding: 1rem 1rem 0.75rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        flex-shrink: 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        margin: 0;
+    }
+
+    /* Compact Stepper */
+    .booking-stepper {
+        width: 100%;
+        justify-content: space-between;
+        gap: 0;
+        position: relative;
+    }
+
+    .step-item {
+        padding: 0;
+        gap: 0;
+        min-width: auto;
+    }
+
+    .step-circle {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+        z-index: 2;
+        background: white;
+    }
+
+    .step-label {
+        display: none !important;
+    }
+
+    .step-line {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 2px;
+        margin: 0;
+        transform: translateY(-50%);
+        z-index: 1;
+    }
+
+    /* Content Area - Tighter Padding */
+    .booking-content {
+        padding: 1rem;
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        max-height: none !important;
+    }
+
+    /* Step Header - More Compact */
+    .step-header {
+        margin-bottom: 1rem;
+    }
+
+    .step-title {
+        font-size: 1.25rem;
+    }
+
+    .step-subtitle {
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Package Cards - Tighter */
+    .packages-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        overflow-x: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .package-card {
+        padding: 0.875rem 1rem;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        min-height: auto;
+        border-radius: 10px;
+    }
+
+    .package-info {
+        flex: 1;
+        padding-right: 0.75rem;
+    }
+
+    .package-name {
+        font-size: 0.9rem;
+    }
+
+    .package-duration {
+        font-size: 0.75rem;
+    }
+
+    .package-price {
+        margin-top: 0;
+        font-size: 1rem;
+        white-space: nowrap;
+    }
+
+    .check-icon {
+        position: static;
+        margin-left: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-terracotta);
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+
+    .check-icon svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    /* Section Divider - Smaller */
+    .form-section-divider {
+        margin: 1rem 0;
+    }
+
+    /* Date & Time Container */
+    .date-time-container {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+
+    .form-group.date-group,
+    .form-group.extension-group {
+        width: 100%;
+        margin: 0;
+    }
+
+    .form-group label {
+        font-size: 0.8rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* ===== CALENDAR - More Compact ===== */
+    .custom-calendar {
+        padding: 0.75rem;
+        border-radius: 10px;
+    }
+
+    .calendar-header {
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .calendar-header button {
+        width: 28px;
+        height: 28px;
+        font-size: 1rem;
+    }
+
+    .calendar-grid {
+        gap: 1px;
+    }
+
+    .calendar-weekday {
+        font-size: 0.65rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .calendar-day {
+        font-size: 0.8rem;
+        width: 100%;
+        aspect-ratio: 1;
+        min-width: 0;
+    }
+
+    /* ===== EXTENSION OPTIONS - Single Column ===== */
+    .extension-options-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .extension-card {
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        min-height: auto;
+    }
+
+    .extension-main {
+        gap: 0.5rem;
+    }
+
+    .ext-icon {
+        font-size: 1rem;
+    }
+
+    .ext-label {
+        font-size: 0.85rem;
+    }
+
+    .ext-price {
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    /* ===== TIME SELECTION ===== */
+    .time-selection-container {
+        padding: 1rem;
+        border-radius: 10px;
+    }
+
+    .time-slot-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.4rem;
+    }
+
+    .time-slot-btn {
+        padding: 0.6rem 0.25rem;
+        font-size: 0.75rem;
+        text-align: center;
+        border-radius: 6px;
+    }
+
+    /* TIME LEGEND - Compact Row */
+    .time-legend {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+        font-size: 0.7rem;
+        margin-top: 0.75rem;
+    }
+
+    .legend-item {
+        gap: 0.3rem;
+    }
+
+    .dot {
+        width: 6px;
+        height: 6px;
+    }
+
+    /* Empty State */
+    .empty-state-box {
+        padding: 1.5rem 1rem;
+    }
+
+    .empty-state-box .icon {
+        font-size: 1.5rem;
+    }
+
+    .empty-state-box p {
+        font-size: 0.85rem;
+    }
+
+    /* Wizard Actions */
+    .wizard-actions {
+        flex-direction: column-reverse;
+        gap: 0.75rem;
+        padding-top: 1.25rem;
+        padding-bottom: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .wizard-actions button {
+        width: 100%;
+        padding: 0.875rem;
+        font-size: 0.95rem;
+    }
+
+    /* ===== PAYMENT STEP ===== */
+    .checkout-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .payment-card-hero {
+        padding: 1.25rem;
+    }
+
+    .payment-details-hero {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: center;
+        text-align: center;
+    }
+
+    .qr-hero {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .qr-hero img {
+        width: 180px;
+        height: 180px;
+        max-width: 100%;
+    }
+
+    .booking-summary-box {
+        padding: 1.25rem;
+    }
+}
+
+/* ===== EXTRA SMALL SCREENS (320px) ===== */
+@media (max-width: 360px) {
+    .booking-content {
+        padding: 0.75rem;
+    }
+
+    .step-header {
+        margin-bottom: 0.75rem;
+    }
+
+    .step-title {
+        font-size: 1.1rem;
+    }
+
+    .step-subtitle {
+        font-size: 0.8rem;
+    }
+
+    /* Tighter Package Cards */
+    .packages-grid {
+        gap: 0.4rem;
+        margin-bottom: 1rem;
+    }
+
+    .package-card {
+        padding: 0.75rem;
+    }
+
+    .package-name {
+        font-size: 0.85rem;
+    }
+
+    .package-duration {
+        font-size: 0.7rem;
+    }
+
+    .package-price {
+        font-size: 0.95rem;
+    }
+
+    /* Even tighter calendar */
+    .calendar-day {
+        font-size: 0.75rem;
+    }
+
+    .calendar-weekday {
+        font-size: 0.6rem;
+    }
+
+    /* Time Slots */
+    .time-slot-btn {
+        padding: 0.5rem 0.2rem;
+        font-size: 0.7rem;
+    }
+
+    /* Extensions */
+    .extension-card {
+        padding: 0.625rem 0.75rem;
+    }
+
+    .ext-label {
+        font-size: 0.8rem;
+    }
+
+    .ext-price {
+        font-size: 0.8rem;
+    }
+
+    /* Time Legend - Stacked on very small screens */
+    .time-legend {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.65rem;
+    }
+}

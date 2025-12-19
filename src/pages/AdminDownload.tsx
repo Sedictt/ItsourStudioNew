@@ -387,6 +387,19 @@ const AdminDownload = () => {
                         font-size: 1.6rem;
                     }
                 }
+
+                @media (max-width: 600px) {
+                    .features-grid {
+                        grid-template-columns: 1fr;
+                    }
+                    .download-card {
+                        padding: 24px;
+                        width: 90%;
+                    }
+                    .header-text h1 {
+                        font-size: 1.5rem;
+                    }
+                }
             `}</style>
         </div>
     );

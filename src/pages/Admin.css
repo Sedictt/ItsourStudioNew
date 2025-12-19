@@ -2779,3 +2779,41 @@ input:checked+.slider:before {
         line-height: 1.4;
     }
 }
+
+/* Mobile Login Optimizations */
+@media (max-width: 480px) {
+    .login-card-glass {
+        padding: 1rem 1rem !important;
+        width: 95% !important;
+        margin: 0 auto;
+    }
+
+    .brand-title {
+        font-size: 1.5rem;
+    }
+
+    /* Force high specificity and ensure sufficient padding */
+    .admin-login-page .input-field-premium {
+        font-size: 0.85rem !important;
+        padding-left: 2.5rem !important;
+        /* increased from 3.25rem */
+        padding-right: 0.5rem !important;
+    }
+
+    /* Move icon slightly left to save space */
+    .admin-login-page .input-icon {
+        left: 0.75rem !important;
+        width: 18px;
+        height: 18px;
+    }
+
+    .admin-login-page .input-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Ensure the wrapper doesn't constrain us */
+    .admin-login-page .input-wrapper {
+        width: 100%;
+    }
+}

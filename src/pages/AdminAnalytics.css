@@ -120,3 +120,36 @@
     color: var(--color-dark);
     font-size: 0.9rem;
 }
+
+/* Chart Container Mobile Fix */
+.chart-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+    .analytics-card {
+        padding: 1rem;
+        overflow: hidden;
+    }
+
+    .chart-container {
+        gap: 0.5rem !important;
+        padding: 1rem 0.5rem 0 !important;
+    }
+
+    /* Prevent bar labels from causing overflow */
+    .chart-container>div {
+        min-width: 0;
+    }
+
+    .analytics-title {
+        font-size: 0.9rem;
+    }
+
+    .analytics-header {
+        margin-bottom: 1rem;
+    }
+}

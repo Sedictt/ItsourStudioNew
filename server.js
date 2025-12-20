@@ -274,6 +274,59 @@ const getRejectedEmail = (booking) => `
 </body>
 </html>`;
 
+// Contact Form Email Template
+const getContactEmail = (contact) => `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Contact Form Inquiry</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+    <div style="width: 100%; padding: 40px 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 6px solid #bf6a39;">
+            
+            <div style="padding: 40px 30px; text-align: center; background-color: #fff7ed;">
+                <div style="font-size: 48px; margin-bottom: 15px;">💬</div>
+                <h1 style="color: #1f2937; margin: 0 0 5px; font-size: 24px; font-weight: 700;">New Website Inquiry</h1>
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">Someone reached out via the contact form</p>
+            </div>
+
+            <div style="padding: 30px 40px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 15px 0; border-bottom: 1px solid #f3f4f6;">
+                            <p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">From</p>
+                            <p style="margin: 0; font-size: 16px; color: #1f2937; font-weight: 600;">${contact.name}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px 0; border-bottom: 1px solid #f3f4f6;">
+                            <p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">Email</p>
+                            <p style="margin: 0; font-size: 16px; color: #bf6a39;"><a href="mailto:${contact.email}" style="color: #bf6a39; text-decoration: none;">${contact.email}</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px 0;">
+                            <p style="margin: 0 0 10px; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">Message</p>
+                            <div style="background-color: #f9fafb; padding: 20px; border-radius: 12px; border-left: 4px solid #bf6a39;">
+                                <p style="margin: 0; font-size: 15px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${contact.message}</p>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div style="background-color: #1f2937; padding: 20px; text-align: center;">
+                <p style="font-size: 12px; color: #9ca3af; margin: 0;">This message was sent from the It's ouR Studio website contact form.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+
+
 // Upload Endpoint (Rate Limited)
 app.post('/upload', uploadLimiter, upload.single('paymentProof'), (req, res) => {
     if (!req.file) {
@@ -328,15 +381,21 @@ app.post('/upload/gallery', uploadLimiter, galleryUpload.single('galleryImage'),
 
 // Email Endpoint (Rate Limited)
 app.post('/send-email', emailLimiter, async (req, res) => {
-    const { type, booking } = req.body;
+    const { type, booking, contact } = req.body;
 
-    if (!type || !booking || !booking.email) {
+    // Allow contact type with different validation
+    if (type === 'contact') {
+        if (!contact || !contact.name || !contact.email || !contact.message) {
+            return res.status(400).json({ error: 'Missing required fields for contact form' });
+        }
+    } else if (!type || !booking || !booking.email) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
     let subject = '';
     let html = '';
     let attachments = [];
+    let toEmail = booking?.email; // Default recipient
 
     switch (type) {
         case 'confirmed':
@@ -357,6 +416,11 @@ app.post('/send-email', emailLimiter, async (req, res) => {
             subject = "Booking Update - It's ouR Studio";
             html = getRejectedEmail(booking);
             break;
+        case 'contact':
+            subject = `New Inquiry from ${contact.name} - It's ouR Studio`;
+            html = getContactEmail(contact);
+            toEmail = process.env.BUSINESS_EMAIL || process.env.EMAIL_USER; // Send to business
+            break;
         default:
             return res.status(400).json({ error: 'Invalid email type' });
     }
@@ -364,7 +428,8 @@ app.post('/send-email', emailLimiter, async (req, res) => {
     try {
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
-            to: booking.email,
+            to: toEmail,
+            replyTo: type === 'contact' ? contact.email : undefined, // Allow easy reply
             subject: subject,
             html: html,
             attachments: attachments
@@ -375,6 +440,7 @@ app.post('/send-email', emailLimiter, async (req, res) => {
         res.status(500).json({ error: 'Failed to send email', details: error.message });
     }
 });
+
 
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

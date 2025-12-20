@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { sanitizeName, sanitizeText, sanitizeNumber } from '../utils/sanitize';
 import './ModalStyles.css'; // Reusing modal styles
 
 interface FeedbackModalProps {
@@ -20,11 +21,22 @@ const FeedbackModal = ({ isOpen, onClose }: FeedbackModalProps) => {
         e.preventDefault();
         setSubmitting(true);
 
+        // Sanitize all inputs before storing
+        const sanitizedName = sanitizeName(name, 50);
+        const sanitizedMessage = sanitizeText(message, 500);
+        const sanitizedRating = sanitizeNumber(rating, 1, 5, 5);
+
+        if (!sanitizedName || !sanitizedMessage) {
+            alert('Please provide a valid name and message.');
+            setSubmitting(false);
+            return;
+        }
+
         try {
             await addDoc(collection(db, 'feedbacks'), {
-                name,
-                rating,
-                message,
+                name: sanitizedName,
+                rating: sanitizedRating,
+                message: sanitizedMessage,
                 showInTestimonials: false, // Default to hidden until approved
                 createdAt: serverTimestamp()
             });

@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, setDoc, serverTimestamp, query, where, getDocs, doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { sanitizeName, sanitizeEmail, sanitizePhoneNumber, sanitizeText } from '../utils/sanitize';
 import paymentQr from '../assets/payment_qr.png';
 import './ModalStyles.css';
 import { useBooking } from '../context/BookingContext';
@@ -594,8 +595,27 @@ const BookingModal = () => {
                 console.log(`File uploaded to: ${paymentProofUrl}`);
             }
 
+            // Sanitize all user inputs before storing
+            const sanitizedFullName = sanitizeName(formData.fullName, 100);
+            const sanitizedEmail = sanitizeEmail(formData.email);
+            const sanitizedPhone = sanitizePhoneNumber(formData.phone.replace(/\s/g, ''));
+            const sanitizedNotes = sanitizeText(formData.notes, 500);
+
+            if (!sanitizedFullName || !sanitizedEmail || !sanitizedPhone) {
+                showToast("Invalid form data. Please check your inputs.", 'error');
+                setIsSubmitting(false);
+                return;
+            }
+
             const docRef = await addDoc(collection(db, 'bookings'), {
-                ...formData,
+                fullName: sanitizedFullName,
+                email: sanitizedEmail,
+                phone: sanitizedPhone,
+                package: formData.package,
+                date: formData.date,
+                time: formData.time,
+                notes: sanitizedNotes,
+                extensionDuration: formData.extensionDuration,
                 totalPrice,
                 downpayment,
                 durationTotal,

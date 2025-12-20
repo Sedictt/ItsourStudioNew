@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useBooking } from '../context/BookingContext';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, orderBy, limit, doc, getDoc } from 'firebase/firestore';
+import { sanitizeName, sanitizeEmail, sanitizeText } from '../utils/sanitize';
 import FeedbackModal from '../components/FeedbackModal';
 import PromoSection from '../components/PromoSection';
 import BackdropVisualizer from '../components/BackdropVisualizer';
@@ -78,6 +79,55 @@ const Home = () => {
         description2: "Equipped with professional lighting, multiple backdrops, and an intuitive remote control system, our studio makes it easy for anyone to create stunning, professional-quality photos. Whether you need headshots for your career, content for social media, or simply want to celebrate yourself, we provide the perfect space and tools.",
         imageUrl: "/about-studio.jpg"
     });
+
+    // Contact Form State
+    const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
+    const [contactSubmitting, setContactSubmitting] = useState(false);
+    const [contactSuccess, setContactSuccess] = useState(false);
+
+    const handleContactChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setContactForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleContactSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setContactSubmitting(true);
+
+        // Sanitize inputs
+        const sanitizedName = sanitizeName(contactForm.name, 100);
+        const sanitizedEmail = sanitizeEmail(contactForm.email);
+        const sanitizedMessage = sanitizeText(contactForm.message, 1000);
+
+        if (!sanitizedName || !sanitizedEmail || !sanitizedMessage) {
+            alert('Please fill in all fields with valid information.');
+            setContactSubmitting(false);
+            return;
+        }
+
+        try {
+            await fetch('http://localhost:3001/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'contact',
+                    contact: {
+                        name: sanitizedName,
+                        email: sanitizedEmail,
+                        message: sanitizedMessage
+                    }
+                })
+            });
+
+            setContactSuccess(true);
+            setContactForm({ name: '', email: '', message: '' });
+            setTimeout(() => setContactSuccess(false), 5000);
+        } catch (error) {
+            console.error('Failed to send contact message:', error);
+            alert('Failed to send message. Please try again or contact us directly.');
+        } finally {
+            setContactSubmitting(false);
+        }
+    };
 
 
 
@@ -584,21 +634,65 @@ const Home = () => {
 
                     <div className="contact-container">
                         <div className="contact-form-wrapper">
-                            <form className="contact-form">
-                                <div className="form-group">
-                                    <label htmlFor="contactName">Name</label>
-                                    <input type="text" id="contactName" placeholder="Your Name" />
+                            {contactSuccess ? (
+                                <div className="contact-success" style={{
+                                    backgroundColor: '#ecfdf5',
+                                    border: '1px solid #10b981',
+                                    borderRadius: '12px',
+                                    padding: '2rem',
+                                    textAlign: 'center'
+                                }}>
+                                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+                                    <h3 style={{ color: '#065f46', marginBottom: '0.5rem' }}>Message Sent!</h3>
+                                    <p style={{ color: '#047857' }}>We'll get back to you as soon as possible.</p>
                                 </div>
-                                <div className="form-group">
-                                    <label htmlFor="contactEmail">Email</label>
-                                    <input type="email" id="contactEmail" placeholder="your@email.com" />
-                                </div>
-                                <div className="form-group">
-                                    <label htmlFor="contactMessage">Message</label>
-                                    <textarea id="contactMessage" rows={5} placeholder="How can we help you?"></textarea>
-                                </div>
-                                <button type="button" className="btn btn-primary">Send Message</button>
-                            </form>
+                            ) : (
+                                <form className="contact-form" onSubmit={handleContactSubmit}>
+                                    <div className="form-group">
+                                        <label htmlFor="contactName">Name</label>
+                                        <input
+                                            type="text"
+                                            id="contactName"
+                                            name="name"
+                                            value={contactForm.name}
+                                            onChange={handleContactChange}
+                                            placeholder="Your Name"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label htmlFor="contactEmail">Email</label>
+                                        <input
+                                            type="email"
+                                            id="contactEmail"
+                                            name="email"
+                                            value={contactForm.email}
+                                            onChange={handleContactChange}
+                                            placeholder="your@email.com"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label htmlFor="contactMessage">Message</label>
+                                        <textarea
+                                            id="contactMessage"
+                                            name="message"
+                                            value={contactForm.message}
+                                            onChange={handleContactChange}
+                                            rows={5}
+                                            placeholder="How can we help you?"
+                                            required
+                                        ></textarea>
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        className="btn btn-primary"
+                                        disabled={contactSubmitting}
+                                    >
+                                        {contactSubmitting ? 'Sending...' : 'Send Message'}
+                                    </button>
+                                </form>
+                            )}
                         </div>
 
                         <div className="contact-info-wrapper">

@@ -1053,7 +1053,7 @@ const BookingModal = () => {
                                 <button
                                     type="submit"
                                     className="btn btn-primary btn-lg"
-                                    disabled={isSubmitting || (step === 3 && !privacyConsent)}
+                                    disabled={isSubmitting}
                                 >
                                     {isSubmitting ? 'Processing...' : step === 3 ? 'Complete Booking' : 'Next Step'}
                                 </button>

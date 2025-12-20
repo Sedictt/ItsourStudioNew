@@ -5414,11 +5414,42 @@ section {
     scroll-snap-align: none !important;
     scroll-snap-stop: normal !important;
     height: auto !important;
-    min-height: 100svh;
+    min-height: auto;
+    padding: 3rem 0;
+  }
+
+  .service-fullscreen.alt-bg {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 
   .showcase-grid {
     scroll-behavior: auto !important;
+  }
+
+  /* Hide all decorative orbs and patterns on Services page */
+  .services-page::before,
+  .services-page::after,
+  .services-orb,
+  .services-orb-1,
+  .services-orb-2 {
+    display: none !important;
+  }
+
+  /* Disable animations on service sections */
+  .service-split,
+  .service-info,
+  .service-showcase {
+    animation: none !important;
+  }
+
+  /* Simplify showcase images */
+  .showcase-item img {
+    transition: none !important;
+  }
+
+  .showcase-item:hover img {
+    transform: none !important;
   }
 }
 

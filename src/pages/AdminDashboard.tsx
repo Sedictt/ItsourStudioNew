@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { db, storage } from '../firebase';
+import { db, storage, auth } from '../firebase';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { compressImage } from '../utils/compressImage';
@@ -570,11 +570,16 @@ const AdminDashboard = () => {
                 </nav>
 
                 <div className="sidebar-footer" style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #f0f0f0' }}>
-                    <button className="nav-item logout-btn" onClick={() => {
+                    <button className="nav-item logout-btn" onClick={async () => {
                         if (window.confirm('Are you sure you want to logout?')) {
-                            sessionStorage.clear();
-                            localStorage.clear();
-                            window.location.href = '/#/admin/login';
+                            try {
+                                await auth.signOut();
+                                sessionStorage.clear();
+                                localStorage.clear();
+                                window.location.href = '/admin/login';
+                            } catch (error) {
+                                console.error("Error signing out:", error);
+                            }
                         }
                     }} style={{ color: '#ef4444', width: '100%' }}>
                         <svg className="nav-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>

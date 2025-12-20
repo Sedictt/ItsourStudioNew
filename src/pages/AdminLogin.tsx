@@ -1,8 +1,8 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
-import bcrypt from 'bcryptjs';
+import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
+import { db, auth } from '../firebase';
 import './Admin.css';
 
 const AdminLogin = () => {
@@ -14,14 +14,13 @@ const AdminLogin = () => {
     const navigate = useNavigate();
 
     // Auto-redirect if already logged in
-
     useEffect(() => {
-        const isSessionAdmin = sessionStorage.getItem('isAdmin') === 'true';
-        const isLocalAdmin = localStorage.getItem('isAdmin') === 'true';
-
-        if (isSessionAdmin || isLocalAdmin) {
-            navigate('/admin', { replace: true });
-        }
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            if (user) {
+                navigate('/admin', { replace: true });
+            }
+        });
+        return () => unsubscribe();
     }, [navigate]);
 
     const handleLogin = async (e: FormEvent) => {
@@ -29,53 +28,47 @@ const AdminLogin = () => {
         setIsLoading(true);
         setError('');
 
-        const storage = rememberMe ? localStorage : sessionStorage;
-
         try {
-            // Check Firestore Users for authentication
+            // Set persistence based on Remember Me
+            await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+
+            // Sign in with Firebase Auth
+            await signInWithEmailAndPassword(auth, email, password);
+
+            // Check Firestore for role and status
             const q = query(collection(db, 'users'), where('email', '==', email));
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
-                setError('User not found');
+                await auth.signOut();
+                setError('User profile not found');
                 setIsLoading(false);
                 return;
             }
 
-            const userDoc = querySnapshot.docs[0];
-            const userData = userDoc.data();
+            const userData = querySnapshot.docs[0].data();
 
-            // Check password - supports both bcrypt hashed and legacy plaintext
-            let isValidPassword = false;
-
-            // Check if password is bcrypt hashed (starts with $2a$ or $2b$)
-            if (userData.password && userData.password.startsWith('$2')) {
-                isValidPassword = await bcrypt.compare(password, userData.password);
-            } else {
-                // Legacy plaintext comparison (for migration period)
-                isValidPassword = userData.password === password;
-                if (isValidPassword) {
-                    console.warn('⚠️ User has plaintext password. Please migrate to bcrypt hash.');
-                }
+            if (userData.status !== 'active') {
+                await auth.signOut();
+                setError('Account is inactive');
+                setIsLoading(false);
+                return;
             }
 
-            if (isValidPassword) {
-                if (userData.status !== 'active') {
-                    setError('Account is inactive');
-                    setIsLoading(false);
-                    return;
-                }
+            // Store role for UI (Auth handles actual security)
+            sessionStorage.setItem('userRole', userData.role);
+            sessionStorage.setItem('isAdmin', 'true');
 
-                storage.setItem('isAdmin', 'true');
-                storage.setItem('userRole', userData.role);
-                storage.setItem('userId', userDoc.id);
-                navigate('/admin');
-            } else {
-                setError('Invalid credentials');
-            }
-        } catch (err) {
+            navigate('/admin');
+        } catch (err: any) {
             console.error("Login Error:", err);
-            setError('Login failed. Please try again.');
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                setError('Invalid email or password');
+            } else if (err.code === 'auth/too-many-requests') {
+                setError('Too many failed attempts. Try again later.');
+            } else {
+                setError('Login failed. Please try again.');
+            }
         } finally {
             setIsLoading(false);
         }

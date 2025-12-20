@@ -13,10 +13,25 @@ import AdminDownload from './pages/AdminDownload';
 
 import { BookingProvider } from './context/BookingContext';
 import BookingModal from './components/BookingModal';
+import { auth } from './firebase';
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
-    const isAdmin = sessionStorage.getItem('isAdmin') === 'true' || localStorage.getItem('isAdmin') === 'true';
-    return isAdmin ? children : <Navigate to="/admin/login" replace />;
+    const [user, setUser] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            setUser(user);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    if (loading) {
+        return <div className="loading-container"><div className="spinner"></div></div>;
+    }
+
+    return user ? children : <Navigate to="/admin/login" replace />;
 };
 
 import ScrollToTop from './components/ScrollToTop';

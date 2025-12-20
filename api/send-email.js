@@ -1,82 +1,100 @@
 import nodemailer from 'nodemailer';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-// Email Templates
+// ============================================
+// PREMIUM EMAIL TEMPLATES FOR IT'S OUR STUDIO
+// ============================================
+
 const getConfirmedEmail = (booking) => {
-    const refDisplay = booking.referenceNumber ? `<div style="margin-top: 8px; font-size: 18px; font-weight: 800; color: #bf6a39; font-family: monospace; letter-spacing: 1px;">${booking.referenceNumber}</div>` : '';
+    const ref = booking.referenceNumber || '';
 
     return `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Booking Confirmed</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmed</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #fcece4; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-    <div style="width: 100%; padding: 40px 0;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(191, 106, 57, 0.15); border: 1px solid rgba(191, 106, 57, 0.1);">
-            <div style="background: #bf6a39; background-image: radial-gradient(#d98c5f 15%, transparent 16%); background-size: 20px 20px; padding: 50px 0; text-align: center; position: relative;">
-                <div style="background-color: #ffffff; width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; line-height: 80px; font-size: 40px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">📸</div>
-                <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; text-transform: uppercase;">You're Booked!</h1>
-                <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; font-weight: 500;">Get ready for your close-up.</p>
+<body style="margin: 0; padding: 0; background-color: #0f0f0f; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <div style="width: 100%; padding: 40px 20px; box-sizing: border-box;">
+        <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 100%); border-radius: 24px; overflow: hidden; border: 1px solid #333;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #bf6a39 0%, #d4854f 50%, #bf6a39 100%); padding: 50px 30px; text-align: center;">
+                <div style="font-size: 50px; margin-bottom: 15px;">✨</div>
+                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px;">YOU'RE ALL SET!</h1>
+                <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 15px;">Your session is officially confirmed</p>
             </div>
-            <div style="padding: 40px 30px;">
-                <p style="color: #4b5563; font-size: 18px; line-height: 1.6; text-align: center; margin-bottom: 30px;">
-                    Hi <strong>${booking.name}</strong>! <br>
-                    Your session at <span style="color: #bf6a39; font-weight: 700;">It's ouR Studio</span> is officially confirmed. We can't wait to see what we create together!
+
+            <!-- Reference Number Banner -->
+            ${ref ? `
+            <div style="background: #111; padding: 20px; text-align: center; border-bottom: 1px solid #333;">
+                <p style="margin: 0 0 8px; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px;">Booking Reference</p>
+                <div style="font-size: 26px; font-weight: 800; color: #bf6a39; font-family: 'Courier New', monospace; letter-spacing: 3px;">${ref}</div>
+            </div>
+            ` : ''}
+
+            <!-- Greeting -->
+            <div style="padding: 35px 30px 20px;">
+                <p style="color: #e0e0e0; font-size: 16px; line-height: 1.7; margin: 0; text-align: center;">
+                    Hey <strong style="color: #fff;">${booking.name}</strong>! 👋<br>
+                    We're thrilled to have you! Here are your session details:
                 </p>
-                <div style="background-color: #fff; border: 2px dashed #fed7aa; border-radius: 16px; position: relative; overflow: hidden;">
-                    <div style="background-color: #fff7ed; padding: 15px; text-align: center; border-bottom: 2px dashed #fed7aa;">
-                        <span style="font-size: 12px; font-weight: 700; color: #9a3412; letter-spacing: 2px; text-transform: uppercase;">— SESSION PASS —</span>
-                        ${refDisplay}
+            </div>
+
+            <!-- Session Details Card -->
+            <div style="padding: 0 30px 30px;">
+                <div style="background: linear-gradient(145deg, #222 0%, #1a1a1a 100%); border-radius: 16px; overflow: hidden; border: 1px solid #333;">
+                    <div style="display: flex;">
+                        <div style="flex: 1; padding: 25px; border-right: 1px solid #333; text-align: center;">
+                            <p style="margin: 0 0 8px; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px;">📅 Date</p>
+                            <p style="margin: 0; font-size: 18px; color: #fff; font-weight: 600;">${booking.date}</p>
+                        </div>
+                        <div style="flex: 1; padding: 25px; text-align: center;">
+                            <p style="margin: 0 0 8px; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px;">⏰ Time</p>
+                            <p style="margin: 0; font-size: 18px; color: #fff; font-weight: 600;">${booking.time_start}</p>
+                        </div>
                     </div>
-                    <div style="padding: 25px;">
-                        <table style="width: 100%;">
-                            <tr>
-                                <td style="width: 50%; padding-bottom: 20px;">
-                                    <p style="margin: 0; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">Date</p>
-                                    <p style="margin: 5px 0 0; font-size: 20px; color: #1f2937; font-weight: 700;">${booking.date}</p>
-                                </td>
-                                <td style="width: 50%; padding-bottom: 20px;">
-                                    <p style="margin: 0; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">Time</p>
-                                    <p style="margin: 5px 0 0; font-size: 20px; color: #1f2937; font-weight: 700;">${booking.time_start}</p>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" style="padding-top: 10px; border-top: 1px solid #f3f4f6;">
-                                    <p style="margin: 15px 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">Package</p>
-                                    <p style="margin: 0; font-size: 16px; color: #bf6a39; font-weight: 700;">${booking.package} ✨</p>
-                                </td>
-                            </tr>
-                        </table>
+                    <div style="border-top: 1px solid #333; padding: 20px; text-align: center;">
+                        <p style="margin: 0 0 8px; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px;">📸 Package</p>
+                        <p style="margin: 0; font-size: 20px; color: #bf6a39; font-weight: 700;">${booking.package}</p>
                     </div>
                 </div>
-                <div style="margin-top: 30px; display: flex; align-items: flex-start; gap: 15px;">
-                    <div style="font-size: 24px;">📍</div>
-                    <div>
-                        <h4 style="margin: 0 0 5px; color: #111827; font-size: 16px; font-weight: 700;">The Studio</h4>
-                        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
-                            FJ Center 15 Tongco Maysan, Valenzuela City<br>
-                            <span style="color: #9ca3af; font-size: 12px;">(Landmarks: PLV, Cebuana, Mr. DIY, and Ever)</span>
-                        </p>
+            </div>
+
+            <!-- Location -->
+            <div style="padding: 0 30px 30px;">
+                <div style="background: #1a1a1a; border-radius: 12px; padding: 20px; border: 1px solid #333;">
+                    <div style="display: flex; align-items: flex-start; gap: 15px;">
+                        <div style="font-size: 24px;">📍</div>
+                        <div>
+                            <p style="margin: 0 0 5px; color: #fff; font-weight: 600; font-size: 14px;">Studio Location</p>
+                            <p style="margin: 0; color: #999; font-size: 13px; line-height: 1.5;">
+                                FJ Center 15 Tongco Maysan, Valenzuela City<br>
+                                <span style="color: #666; font-size: 12px;">Near PLV, Cebuana, Mr. DIY, Ever</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
-                <div style="margin-top: 30px; background-color: #fffaeb; padding: 20px; border-radius: 0 0 16px 0; border-left: 4px solid #f59e0b; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                    <h4 style="margin: 0 0 10px; color: #92400e; font-size: 14px; font-weight: 700; text-transform: uppercase;">📝 Things to Remember</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 13px; line-height: 1.6;">
-                        <li style="margin-bottom: 5px;">Arrive <strong>15 mins early</strong> to prep!</li>
-                        <li style="margin-bottom: 5px;">Late arrival = less shooting time.</li>
-                        <li style="margin-bottom: 5px;">Pets are welcome! (Diapers required 🐾)</li>
-                        <li style="margin-bottom: 5px;">Bring your creative props!</li>
+            </div>
+
+            <!-- Reminders -->
+            <div style="padding: 0 30px 30px;">
+                <div style="background: linear-gradient(135deg, #2d2418 0%, #1a1a1a 100%); border-radius: 12px; padding: 20px; border-left: 4px solid #bf6a39;">
+                    <p style="margin: 0 0 12px; color: #bf6a39; font-weight: 700; font-size: 13px; text-transform: uppercase;">📝 Quick Reminders</p>
+                    <ul style="margin: 0; padding-left: 18px; color: #ccc; font-size: 13px; line-height: 1.8;">
+                        <li>Arrive <strong>15 minutes early</strong></li>
+                        <li>Late = less shooting time</li>
+                        <li>Pets welcome (diapers required 🐾)</li>
+                        <li>Bring props & outfit changes!</li>
                     </ul>
                 </div>
             </div>
-            <div style="background-color: #1f2937; color: #ffffff; padding: 30px; text-align: center;">
-                <p style="font-size: 18px; font-weight: 300; margin: 0 0 10px;">Let's make magic.</p>
-                <div style="width: 50px; height: 2px; background-color: #bf6a39; margin: 0 auto 20px;"></div>
-                <p style="font-size: 12px; color: #9ca3af; margin: 0;">© It's ouR Studio. All rights reserved.</p>
+
+            <!-- Footer -->
+            <div style="background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid #222;">
+                <p style="margin: 0 0 10px; color: #bf6a39; font-size: 18px; font-weight: 300;">See you soon! 📸</p>
+                <p style="margin: 0; color: #555; font-size: 11px;">© It's ouR Studio • All rights reserved</p>
             </div>
         </div>
     </div>
@@ -85,52 +103,79 @@ const getConfirmedEmail = (booking) => {
 };
 
 const getReceivedEmail = (booking) => {
-    const referenceSection = booking.referenceNumber ? `
-                <div style="text-align: center; margin-bottom: 25px;">
-                    <p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">Your Booking Reference</p>
-                    <div style="display: inline-block; background-color: #f3f4f6; padding: 10px 25px; border-radius: 8px; font-size: 20px; font-weight: 800; color: #1f2937; font-family: monospace; letter-spacing: 2px;">${booking.referenceNumber}</div>
-                    <p style="margin: 8px 0 0; font-size: 11px; color: #9ca3af;">Include this in your GCash payment notes</p>
-                </div>` : '';
+    const ref = booking.referenceNumber || '';
 
     return `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Booking Request Received</title>
+    <title>Booking Received</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-    <div style="width: 100%; padding: 40px 0;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
-            <div style="background-color: #111827; padding: 40px 30px; text-align: center; background-image: linear-gradient(45deg, #1f2937 25%, transparent 25%, transparent 75%, #1f2937 75%, #1f2937), linear-gradient(45deg, #1f2937 25%, transparent 25%, transparent 75%, #1f2937 75%, #1f2937); background-size: 20px 20px; background-position: 0 0, 10px 10px;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;">One Step Left</h1>
-                <div style="display: inline-block; background-color: #bf6a39; color: white; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;">Action Required</div>
+<body style="margin: 0; padding: 0; background-color: #0f0f0f; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <div style="width: 100%; padding: 40px 20px; box-sizing: border-box;">
+        <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 100%); border-radius: 24px; overflow: hidden; border: 1px solid #333;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #1a1a1a 0%, #111 100%); padding: 50px 30px; text-align: center; border-bottom: 1px solid #333;">
+                <div style="font-size: 50px; margin-bottom: 15px;">⏳</div>
+                <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">ALMOST THERE!</h1>
+                <p style="color: #888; margin: 10px 0 0; font-size: 14px;">Complete your payment to secure your slot</p>
             </div>
-            <div style="padding: 40px 30px;">
-                <p style="color: #374151; font-size: 16px; line-height: 1.6; text-align: center; margin-bottom: 20px;">
-                    Thanks for choosing It's ouR Studio! Your slot is <strong>reserved temporarily</strong>. <br>To lock it in, please complete the 50% downpayment below.
-                </p>
-                ${referenceSection}
-                <div style="background: linear-gradient(135deg, #ffffff 0%, #fff7ed 100%); border: 1px solid #fed7aa; border-radius: 16px; padding: 0; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);">
-                    <div style="padding: 30px 20px; text-align: center;">
-                        <p style="margin: 0; font-size: 13px; color: #9ca3af; text-transform: uppercase; font-weight: 600; letter-spacing: 1px;">Total Downpayment Due</p>
-                        <h2 style="margin: 5px 0 20px; color: #bf6a39; font-size: 42px; font-weight: 800;">₱${booking.downpayment}</h2>
-                        <p style="margin: 0; font-size: 16px; font-weight: 700; color: #1f2937;">GCash: Reggie L.</p>
-                        <p style="margin: 0; font-size: 14px; color: #6b7280; font-family: monospace;">0905 336 7103</p>
+
+            <!-- Reference Number - PROMINENT -->
+            ${ref ? `
+            <div style="background: linear-gradient(135deg, #bf6a39 0%, #a85a2f 100%); padding: 25px; text-align: center;">
+                <p style="margin: 0 0 8px; font-size: 11px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 2px;">Your Booking Reference</p>
+                <div style="font-size: 32px; font-weight: 800; color: #fff; font-family: 'Courier New', monospace; letter-spacing: 4px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${ref}</div>
+                <p style="margin: 12px 0 0; font-size: 12px; color: rgba(255,255,255,0.7);">📋 Include this in your GCash payment notes</p>
+            </div>
+            ` : ''}
+
+            <!-- Payment Details -->
+            <div style="padding: 30px;">
+                <div style="background: linear-gradient(145deg, #222 0%, #1a1a1a 100%); border-radius: 16px; overflow: hidden; border: 1px solid #333; text-align: center;">
+                    <div style="padding: 30px 20px; border-bottom: 1px solid #333;">
+                        <p style="margin: 0 0 5px; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px;">Downpayment Required</p>
+                        <div style="font-size: 48px; font-weight: 800; color: #bf6a39;">₱${booking.downpayment}</div>
                     </div>
-                    <div style="background-color: #bf6a39; padding: 15px; text-align: center;">
-                        <p style="margin: 0; color: #ffffff; font-size: 14px; font-weight: 500;">Please send payment & reply with screenshot 📸</p>
+                    <div style="padding: 25px 20px; background: #1a1a1a;">
+                        <p style="margin: 0 0 5px; font-size: 12px; color: #888;">Send via GCash to:</p>
+                        <p style="margin: 0; font-size: 20px; color: #fff; font-weight: 700;">Reggie L.</p>
+                        <p style="margin: 8px 0 0; font-size: 22px; color: #bf6a39; font-family: 'Courier New', monospace; font-weight: 700;">0905 336 7103</p>
                     </div>
                 </div>
-                <div style="margin-top: 30px; text-align: center;">
-                    <div style="background-color: #fef2f2; display: inline-block; padding: 10px 20px; border-radius: 8px; border: 1px solid #fee2e2;">
-                        <span style="color: #ef4444; font-size: 13px; font-weight: 600;">⚠️ Deadline: 11:59 PM Tonight</span>
-                    </div>
+            </div>
+
+            <!-- Deadline Warning -->
+            <div style="padding: 0 30px 30px;">
+                <div style="background: linear-gradient(135deg, #3d1515 0%, #1a1a1a 100%); border-radius: 12px; padding: 20px; text-align: center; border: 1px solid #5c2020;">
+                    <p style="margin: 0; color: #ff6b6b; font-size: 14px; font-weight: 600;">
+                        ⚠️ Payment Deadline: <strong>11:59 PM Tonight</strong>
+                    </p>
+                    <p style="margin: 8px 0 0; color: #999; font-size: 12px;">Unpaid reservations will be released</p>
                 </div>
             </div>
-             <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
-                <p style="color: #9ca3af; font-size: 12px; margin: 0;">Need help? Just reply to this email.</p>
+
+            <!-- Instructions -->
+            <div style="padding: 0 30px 30px;">
+                <div style="background: #111; border-radius: 12px; padding: 20px; border: 1px solid #333;">
+                    <p style="margin: 0 0 15px; color: #fff; font-weight: 600; font-size: 14px;">📱 How to Complete Payment:</p>
+                    <ol style="margin: 0; padding-left: 20px; color: #aaa; font-size: 13px; line-height: 2;">
+                        <li>Open your GCash app</li>
+                        <li>Send ₱${booking.downpayment} to <strong style="color: #bf6a39;">0905 336 7103</strong></li>
+                        <li>Add reference <strong style="color: #fff;">${ref || 'your name'}</strong> in notes</li>
+                        <li>Screenshot the confirmation</li>
+                        <li>Reply to this email with the screenshot</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="background: #0a0a0a; padding: 25px; text-align: center; border-top: 1px solid #222;">
+                <p style="margin: 0 0 8px; color: #888; font-size: 12px;">Questions? Just reply to this email</p>
+                <p style="margin: 0; color: #444; font-size: 11px;">© It's ouR Studio</p>
             </div>
         </div>
     </div>
@@ -139,37 +184,60 @@ const getReceivedEmail = (booking) => {
 };
 
 const getRejectedEmail = (booking) => {
-    const refLine = booking.referenceNumber ? `<p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Reference: <strong style="color: #374151;">${booking.referenceNumber}</strong></p>` : '';
+    const ref = booking.referenceNumber || '';
 
     return `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Booking Update</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-    <div style="width: 100%; padding: 40px 0;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 6px solid #ef4444;">
-            <div style="padding: 50px 30px; text-align: center;">
-                <div style="font-size: 48px; margin-bottom: 20px;">🗓️</div>
-                <h1 style="color: #1f2937; margin: 0 0 10px; font-size: 24px; font-weight: 700;">Booking Status</h1>
-                <p style="color: #6b7280; font-size: 16px; margin: 0;">We have an update regarding your request.</p>
+<body style="margin: 0; padding: 0; background-color: #0f0f0f; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <div style="width: 100%; padding: 40px 20px; box-sizing: border-box;">
+        <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 100%); border-radius: 24px; overflow: hidden; border: 1px solid #333;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #2d1a1a 0%, #1a1010 100%); padding: 50px 30px; text-align: center; border-bottom: 1px solid #442222;">
+                <div style="font-size: 50px; margin-bottom: 15px;">📋</div>
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700;">BOOKING UPDATE</h1>
+                <p style="color: #888; margin: 10px 0 0; font-size: 14px;">We have news about your reservation</p>
             </div>
-            <div style="padding: 0 40px 40px;">
-                <div style="background-color: #fef2f2; border-radius: 12px; padding: 25px; text-align: left; border: 1px solid #fee2e2;">
-                    <p style="margin: 0 0 10px; color: #991b1b; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Message from Admin</p>
-                    <p style="margin: 0; color: #7f1d1d; font-size: 16px; line-height: 1.5;">${booking.reason}</p>
-                </div>
-                <div style="margin-top: 30px; border-top: 1px solid #f3f4f6; padding-top: 20px;">
-                    ${refLine}
-                    <p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Regarding Request For</p>
-                    <p style="margin: 0; font-size: 15px; color: #374151; font-weight: 500;">${booking.package} on ${booking.date}</p>
+
+            <!-- Reference -->
+            ${ref ? `
+            <div style="background: #111; padding: 15px; text-align: center; border-bottom: 1px solid #333;">
+                <p style="margin: 0; font-size: 12px; color: #888;">Reference: <strong style="color: #fff; font-family: monospace;">${ref}</strong></p>
+            </div>
+            ` : ''}
+
+            <!-- Message -->
+            <div style="padding: 30px;">
+                <div style="background: linear-gradient(135deg, #2d1515 0%, #1a1a1a 100%); border-radius: 12px; padding: 25px; border: 1px solid #442222;">
+                    <p style="margin: 0 0 10px; color: #ff8080; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Message from Admin</p>
+                    <p style="margin: 0; color: #ddd; font-size: 15px; line-height: 1.6;">${booking.reason}</p>
                 </div>
             </div>
-            <div style="background-color: #f9fafb; padding: 20px; text-align: center;">
-                <p style="font-size: 14px; color: #6b7280;">Have questions? <a href="mailto:itsourstudio1@gmail.com" style="color: #bf6a39; text-decoration: none; font-weight: 600;">Contact Support</a></p>
+
+            <!-- Booking Details -->
+            <div style="padding: 0 30px 30px;">
+                <div style="background: #111; border-radius: 12px; padding: 20px; border: 1px solid #333;">
+                    <p style="margin: 0 0 5px; font-size: 11px; color: #666; text-transform: uppercase;">Regarding</p>
+                    <p style="margin: 0; color: #fff; font-size: 15px;"><strong>${booking.package}</strong> on ${booking.date}</p>
+                </div>
+            </div>
+
+            <!-- CTA -->
+            <div style="padding: 0 30px 30px; text-align: center;">
+                <p style="color: #888; font-size: 14px; margin: 0 0 15px;">Want to book a different slot?</p>
+                <a href="https://itsour-studio.vercel.app" style="display: inline-block; background: linear-gradient(135deg, #bf6a39 0%, #a85a2f 100%); color: #fff; text-decoration: none; padding: 14px 35px; border-radius: 30px; font-weight: 600; font-size: 14px;">Browse Available Dates</a>
+            </div>
+
+            <!-- Footer -->
+            <div style="background: #0a0a0a; padding: 25px; text-align: center; border-top: 1px solid #222;">
+                <p style="margin: 0 0 8px; color: #888; font-size: 12px;">Need help? Email us at <a href="mailto:itsourstudio1@gmail.com" style="color: #bf6a39;">itsourstudio1@gmail.com</a></p>
+                <p style="margin: 0; color: #444; font-size: 11px;">© It's ouR Studio</p>
             </div>
         </div>
     </div>
@@ -179,51 +247,59 @@ const getRejectedEmail = (booking) => {
 
 const getContactEmail = (contact) => `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Contact Form Inquiry</title>
+    <title>New Inquiry</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-    <div style="width: 100%; padding: 40px 0;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 6px solid #bf6a39;">
-            <div style="padding: 40px 30px; text-align: center; background-color: #fff7ed;">
-                <div style="font-size: 48px; margin-bottom: 15px;">💬</div>
-                <h1 style="color: #1f2937; margin: 0 0 5px; font-size: 24px; font-weight: 700;">New Website Inquiry</h1>
-                <p style="color: #6b7280; font-size: 14px; margin: 0;">Someone reached out via the contact form</p>
+<body style="margin: 0; padding: 0; background-color: #0f0f0f; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <div style="width: 100%; padding: 40px 20px; box-sizing: border-box;">
+        <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 100%); border-radius: 24px; overflow: hidden; border: 1px solid #333;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #bf6a39 0%, #a85a2f 100%); padding: 40px 30px; text-align: center;">
+                <div style="font-size: 40px; margin-bottom: 10px;">💬</div>
+                <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700;">NEW WEBSITE INQUIRY</h1>
             </div>
-            <div style="padding: 30px 40px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td style="padding: 15px 0; border-bottom: 1px solid #f3f4f6;">
-                            <p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">From</p>
-                            <p style="margin: 0; font-size: 16px; color: #1f2937; font-weight: 600;">${contact.name}</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 15px 0; border-bottom: 1px solid #f3f4f6;">
-                            <p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">Email</p>
-                            <p style="margin: 0; font-size: 16px; color: #bf6a39;"><a href="mailto:${contact.email}" style="color: #bf6a39; text-decoration: none;">${contact.email}</a></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 15px 0;">
-                            <p style="margin: 0 0 10px; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">Message</p>
-                            <div style="background-color: #f9fafb; padding: 20px; border-radius: 12px; border-left: 4px solid #bf6a39;">
-                                <p style="margin: 0; font-size: 15px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${contact.message}</p>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
+
+            <!-- Contact Details -->
+            <div style="padding: 30px;">
+                <div style="background: #111; border-radius: 12px; overflow: hidden; border: 1px solid #333;">
+                    <div style="padding: 20px; border-bottom: 1px solid #333;">
+                        <p style="margin: 0 0 5px; font-size: 11px; color: #888; text-transform: uppercase;">From</p>
+                        <p style="margin: 0; color: #fff; font-size: 16px; font-weight: 600;">${contact.name}</p>
+                    </div>
+                    <div style="padding: 20px; border-bottom: 1px solid #333;">
+                        <p style="margin: 0 0 5px; font-size: 11px; color: #888; text-transform: uppercase;">Email</p>
+                        <a href="mailto:${contact.email}" style="color: #bf6a39; font-size: 15px; text-decoration: none;">${contact.email}</a>
+                    </div>
+                    <div style="padding: 20px;">
+                        <p style="margin: 0 0 10px; font-size: 11px; color: #888; text-transform: uppercase;">Message</p>
+                        <div style="background: #0a0a0a; padding: 20px; border-radius: 8px; border-left: 3px solid #bf6a39;">
+                            <p style="margin: 0; color: #ddd; font-size: 14px; line-height: 1.7; white-space: pre-wrap;">${contact.message}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div style="background-color: #1f2937; padding: 20px; text-align: center;">
-                <p style="font-size: 12px; color: #9ca3af; margin: 0;">This message was sent from the It's ouR Studio website contact form.</p>
+
+            <!-- Quick Reply -->
+            <div style="padding: 0 30px 30px; text-align: center;">
+                <a href="mailto:${contact.email}" style="display: inline-block; background: linear-gradient(135deg, #bf6a39 0%, #a85a2f 100%); color: #fff; text-decoration: none; padding: 14px 35px; border-radius: 30px; font-weight: 600; font-size: 14px;">Reply to ${contact.name}</a>
+            </div>
+
+            <!-- Footer -->
+            <div style="background: #0a0a0a; padding: 20px; text-align: center; border-top: 1px solid #222;">
+                <p style="margin: 0; color: #555; font-size: 11px;">Sent from It's ouR Studio website contact form</p>
             </div>
         </div>
     </div>
 </body>
 </html>`;
+
+// ============================================
+// API HANDLER
+// ============================================
 
 export default async function handler(req, res) {
     // CORS headers
@@ -231,7 +307,6 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // Handle preflight
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
@@ -242,7 +317,7 @@ export default async function handler(req, res) {
 
     const { type, booking, contact } = req.body;
 
-    // Validate based on type
+    // Validation
     if (type === 'contact') {
         if (!contact || !contact.name || !contact.email || !contact.message) {
             return res.status(400).json({ error: 'Missing required fields for contact form' });
@@ -251,11 +326,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Validate Environment Variables
+    // Check environment variables
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
         return res.status(500).json({
             error: 'Server configuration error',
-            details: 'Missing EMAIL_USER or EMAIL_PASS in environment variables.'
+            details: 'Missing EMAIL_USER or EMAIL_PASS'
         });
     }
 
@@ -274,19 +349,19 @@ export default async function handler(req, res) {
 
     switch (type) {
         case 'confirmed':
-            subject = "Booking Confirmed - It's ouR Studio";
+            subject = `✅ Booking Confirmed ${booking.referenceNumber ? `[${booking.referenceNumber}]` : ''} - It's ouR Studio`;
             html = getConfirmedEmail(booking);
             break;
         case 'received':
-            subject = "Booking Received - It's ouR Studio";
+            subject = `📸 Booking Received ${booking.referenceNumber ? `[${booking.referenceNumber}]` : ''} - Action Required`;
             html = getReceivedEmail(booking);
             break;
         case 'rejected':
-            subject = "Booking Update - It's ouR Studio";
+            subject = `📋 Booking Update ${booking.referenceNumber ? `[${booking.referenceNumber}]` : ''} - It's ouR Studio`;
             html = getRejectedEmail(booking);
             break;
         case 'contact':
-            subject = `New Inquiry from ${contact.name} - It's ouR Studio`;
+            subject = `💬 New Inquiry from ${contact.name}`;
             html = getContactEmail(contact);
             toEmail = process.env.BUSINESS_EMAIL || process.env.EMAIL_USER;
             break;
@@ -296,7 +371,7 @@ export default async function handler(req, res) {
 
     try {
         await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+            from: `"It's ouR Studio" <${process.env.EMAIL_USER}>`,
             to: toEmail,
             replyTo: type === 'contact' ? contact.email : undefined,
             subject: subject,
@@ -305,12 +380,11 @@ export default async function handler(req, res) {
 
         res.status(200).json({ message: 'Email sent successfully' });
     } catch (error) {
-        console.error('Error sending email:', error);
+        console.error('Email error:', error);
         res.status(500).json({
             error: 'Failed to send email',
             message: error.message,
-            code: error.code // This helps identify Gmail auth issues
+            code: error.code
         });
     }
 }
-

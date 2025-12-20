@@ -5355,9 +5355,9 @@ section {
     -webkit-backdrop-filter: none !important;
   }
 
-  /* Ensure navbrand is still visible with background fallback */
+  /* Ensure navbar is still visible with solid background fallback */
   .navbar.scrolled {
-    background: rgba(255, 244, 230, 0.98) !important;
+    background: var(--color-terracotta) !important;
   }
 
   /* Reduce or disable floating orb animations */

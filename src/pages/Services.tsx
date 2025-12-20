@@ -141,6 +141,7 @@ const ServiceShowcase = ({ service }: { service: typeof services[0] }) => {
 
     // Check if device is touch-enabled (disable auto-scroll for performance)
     const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
     useEffect(() => {
         // Skip auto-scroll on mobile/touch devices for performance
@@ -173,6 +174,17 @@ const ServiceShowcase = ({ service }: { service: typeof services[0] }) => {
         return () => clearInterval(intervalId);
     }, [isPaused, isTouchDevice]);
 
+    // On mobile, render only a single image for performance
+    if (isMobile) {
+        return (
+            <div className="service-showcase">
+                <div className="showcase-single">
+                    <img src={service.imageMain} alt={`${service.title}`} loading="lazy" />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="service-showcase">
             <div
@@ -204,6 +216,9 @@ const Services = () => {
     const [isDragging, setIsDragging] = useState(false);
     const [sliderValue, setSliderValue] = useState(0);
     const sliderRef = useRef<HTMLDivElement>(null);
+
+    // Check if mobile for conditional rendering
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
     useEffect(() => {
         let scrollTimeout: ReturnType<typeof setTimeout>;
@@ -311,25 +326,31 @@ const Services = () => {
 
     return (
         <div className="services-page">
-            {/* Decorative Elements */}
-            <div className="services-orb services-orb-1"></div>
-            <div className="services-orb services-orb-2"></div>
+            {/* Decorative Elements - Only on desktop */}
+            {!isMobile && (
+                <>
+                    <div className="services-orb services-orb-1"></div>
+                    <div className="services-orb services-orb-2"></div>
+                </>
+            )}
 
-            {/* Side Navigation - Minimalist Slider */}
-            <nav className="side-nav">
-                <div
-                    className="side-nav-track"
-                    style={{ height: '300px' }}
-                    ref={sliderRef}
-                    onMouseDown={handleMouseDown}
-                    onTouchStart={handleTouchStart}
-                >
+            {/* Side Navigation - Only on desktop */}
+            {!isMobile && (
+                <nav className="side-nav">
                     <div
-                        className="side-nav-progress"
-                        style={{ height: `${sliderValue}%` }}
-                    ></div>
-                </div>
-            </nav>
+                        className="side-nav-track"
+                        style={{ height: '300px' }}
+                        ref={sliderRef}
+                        onMouseDown={handleMouseDown}
+                        onTouchStart={handleTouchStart}
+                    >
+                        <div
+                            className="side-nav-progress"
+                            style={{ height: `${sliderValue}%` }}
+                        ></div>
+                    </div>
+                </nav>
+            )}
 
             {/* Service Sections */}
             {services.map((service, index) => (

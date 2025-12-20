@@ -1162,71 +1162,46 @@ const ContentManagement = ({ showToast }: ContentManagementProps) => {
                                 </div>
                             </div>
                             <div className="card-body">
-                                <div className="backdrop-grid">
+                                <div className="faq-list">
                                     {faqs.map(faq => (
-                                        <div key={faq.id} className="backdrop-card" style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                    <h5 style={{ margin: 0, fontSize: '1rem' }}>{faq.question}</h5>
-                                                    <span className="badge" style={{ background: '#eee', color: '#666' }}>#{faq.order}</span>
-                                                </div>
-                                                <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem', whiteSpace: 'pre-wrap' }}>{faq.answer}</p>
+                                        <div key={faq.id} className="faq-item-card">
+                                            <div className="faq-header-row">
+                                                <h5 className="faq-question-text">{faq.question}</h5>
+                                                <span className="faq-order-badge">#{faq.order}</span>
                                             </div>
-                                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                                                <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => handleEditFaq(faq)}>Edit</button>
-                                                <button className="btn btn-outline btn-sm" style={{ flex: 1, borderColor: '#ff4d4f', color: '#ff4d4f' }} onClick={() => handleDeleteFaq(faq.id)}>Delete</button>
+                                            <div className="faq-answer-text">
+                                                {faq.answer}
+                                            </div>
+                                            <div className="faq-actions">
+                                                <button className="btn btn-outline" onClick={() => handleEditFaq(faq)}>
+                                                    <span style={{ marginRight: '5px' }}>✏️</span> Edit
+                                                </button>
+                                                <button className="btn btn-outline" style={{ borderColor: '#ef4444', color: '#ef4444' }} onClick={() => handleDeleteFaq(faq.id)}>
+                                                    <span style={{ marginRight: '5px' }}>🗑️</span> Delete
+                                                </button>
                                             </div>
                                         </div>
                                     ))}
                                     {faqs.length === 0 && (
-                                        <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#888', background: '#f9f9f9', borderRadius: '8px' }}>
-                                            <p style={{ marginBottom: '1rem' }}>No FAQs added yet.</p>
+                                        <div className="faq-empty-state">
+                                            <h5>No FAQs added yet</h5>
+                                            <p>Create your own or load standard ones.</p>
                                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                                                 <button className="btn btn-primary" onClick={() => {
                                                     setFaqForm({ id: '', question: '', answer: '', order: faqs.length + 1 });
                                                     setIsFaqModalOpen(true);
                                                 }}>
-                                                    Add Your First Question
+                                                    Add First Question
                                                 </button>
                                                 <button className="btn btn-outline" onClick={async () => {
-                                                    if (!window.confirm("Load default studio FAQs?")) return;
+                                                    if (!window.confirm("Load default studio FAQs? This will add 6 common questions.")) return;
                                                     const defaultFaqs: FAQItem[] = [
-                                                        {
-                                                            id: 'faq-1',
-                                                            question: 'Do I need to book in advance?',
-                                                            answer: 'Yes, we highly recommend booking your slot in advance to ensure availability. Walk-ins are subject to time slot openings.',
-                                                            order: 1
-                                                        },
-                                                        {
-                                                            id: 'faq-2',
-                                                            question: 'Can I bring my pet?',
-                                                            answer: 'Absolutely! We are a pet-friendly studio. We love capturing moments with your furry friends. Just make sure they are potty trained or wearing diapers.',
-                                                            order: 2
-                                                        },
-                                                        {
-                                                            id: 'faq-3',
-                                                            question: 'What happens if I am late?',
-                                                            answer: 'Your session time starts promptly at your booked time. If you arrive late, it will consume part of your session time as we need to respect the bookings of clients after you.',
-                                                            order: 3
-                                                        },
-                                                        {
-                                                            id: 'faq-4',
-                                                            question: 'How do I receive my photos?',
-                                                            answer: 'All soft copies will be sent to your provided email address via a Google Drive link within 24 hours after your session.',
-                                                            order: 4
-                                                        },
-                                                        {
-                                                            id: 'faq-5',
-                                                            question: 'Can we bring props or outfits?',
-                                                            answer: 'Yes! We encourage you to bring your own props, outfits, and accessories to make your shoot unique. We also have a selection of basic props available.',
-                                                            order: 5
-                                                        },
-                                                        {
-                                                            id: 'faq-6',
-                                                            question: 'What is your cancellation policy?',
-                                                            answer: 'Rescheduling is allowed up to 24 hours before your session. Cancellations made less than 24 hours prior may forfeit the reservation fee.',
-                                                            order: 6
-                                                        }
+                                                        { id: 'faq-1', question: 'Do I need to book in advance?', answer: 'Yes, we highly recommend booking your slot in advance to ensure availability. Walk-ins are subject to time slot openings.', order: 1 },
+                                                        { id: 'faq-2', question: 'Can I bring my pet?', answer: 'Absolutely! We are a pet-friendly studio. We love capturing moments with your furry friends. Just make sure they are potty trained or wearing diapers.', order: 2 },
+                                                        { id: 'faq-3', question: 'What happens if I am late?', answer: 'Your session time starts promptly at your booked time. If you arrive late, it will consume part of your session time as we need to respect the bookings of clients after you.', order: 3 },
+                                                        { id: 'faq-4', question: 'How do I receive my photos?', answer: 'All soft copies will be sent to your provided email address via a Google Drive link within 24 hours after your session.', order: 4 },
+                                                        { id: 'faq-5', question: 'Can we bring props or outfits?', answer: 'Yes! We encourage you to bring your own props, outfits, and accessories to make your shoot unique. We also have a selection of basic props available.', order: 5 },
+                                                        { id: 'faq-6', question: 'What is your cancellation policy?', answer: 'Rescheduling is allowed up to 24 hours before your session. Cancellations made less than 24 hours prior may forfeit the reservation fee.', order: 6 }
                                                     ];
                                                     setFaqs(defaultFaqs);
                                                     await setDoc(doc(db, 'siteContent', 'faq'), { items: defaultFaqs });

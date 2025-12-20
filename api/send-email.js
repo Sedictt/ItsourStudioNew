@@ -231,6 +231,14 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Validate Environment Variables
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        return res.status(500).json({
+            error: 'Server configuration error',
+            details: 'Missing EMAIL_USER or EMAIL_PASS in environment variables.'
+        });
+    }
+
     // Create transporter
     const transporter = nodemailer.createTransport({
         service: 'gmail',
@@ -278,6 +286,11 @@ export default async function handler(req, res) {
         res.status(200).json({ message: 'Email sent successfully' });
     } catch (error) {
         console.error('Error sending email:', error);
-        res.status(500).json({ error: 'Failed to send email', details: error.message });
+        res.status(500).json({
+            error: 'Failed to send email',
+            message: error.message,
+            code: error.code // This helps identify Gmail auth issues
+        });
     }
 }
+

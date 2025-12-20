@@ -72,6 +72,7 @@ const Footer = () => {
                 </div>
                 <div className="footer-bottom">
                     <p>&copy; {currentYear} it's ouR Studio. All rights reserved.</p>
+                    <Link to="/privacy-policy" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginTop: '0.5rem', display: 'inline-block' }}>Privacy Policy</Link>
                 </div>
             </div>
         </footer>

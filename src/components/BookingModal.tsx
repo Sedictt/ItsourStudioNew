@@ -46,6 +46,7 @@ const BookingModal = () => {
     const [bookedRanges, setBookedRanges] = useState<BookedSlot[]>([]);
     const [unavailableDates, setUnavailableDates] = useState<Record<string, string>>({});
     const [seasonalPromo, setSeasonalPromo] = useState<any>(null); // State for seasonal promo data
+    const [privacyConsent, setPrivacyConsent] = useState(false); // DPA Compliance
 
     // Fetch Seasonal Promo Data
     useEffect(() => {
@@ -999,13 +1000,56 @@ const BookingModal = () => {
                                 </div>
                             )}
 
+                            {step === 3 && (
+                                <div className="privacy-consent-box" style={{
+                                    marginTop: '1.5rem',
+                                    padding: '1rem',
+                                    background: '#f8f9fa',
+                                    borderRadius: '8px',
+                                    border: '1px solid #e9ecef'
+                                }}>
+                                    <label style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '0.75rem',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        color: '#444'
+                                    }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={privacyConsent}
+                                            onChange={(e) => setPrivacyConsent(e.target.checked)}
+                                            required
+                                            style={{
+                                                marginTop: '3px',
+                                                width: '18px',
+                                                height: '18px',
+                                                accentColor: '#c9a86c'
+                                            }}
+                                        />
+                                        <span>
+                                            I agree to the collection and processing of my personal data as described in the{' '}
+                                            <a href="/privacy-policy" target="_blank" style={{ color: '#c9a86c', fontWeight: 500 }}>
+                                                Privacy Policy
+                                            </a>{' '}
+                                            in accordance with the Data Privacy Act of 2012 (RA 10173).
+                                        </span>
+                                    </label>
+                                </div>
+                            )}
+
                             <div className="wizard-actions">
                                 {step > 1 && (
                                     <button type="button" className="btn btn-secondary btn-lg" onClick={handleBackStep}>
                                         Back
                                     </button>
                                 )}
-                                <button type="submit" className="btn btn-primary btn-lg" disabled={isSubmitting}>
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary btn-lg"
+                                    disabled={isSubmitting || (step === 3 && !privacyConsent)}
+                                >
                                     {isSubmitting ? 'Processing...' : step === 3 ? 'Complete Booking' : 'Next Step'}
                                 </button>
                             </div>

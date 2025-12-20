@@ -7,9 +7,11 @@ import Home from './pages/Home';
 import Services from './pages/Services';
 import Gallery from './pages/Gallery';
 import EmailTest from './pages/EmailTest';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLogin from './pages/AdminLogin';
 import AdminDownload from './pages/AdminDownload';
+import CookieConsent from './components/CookieConsent';
 
 import { BookingProvider } from './context/BookingContext';
 import BookingModal from './components/BookingModal';
@@ -61,6 +63,7 @@ const AppContent = ({ onRouteChange }: { onRouteChange: () => void }) => {
                 <Route path="/services" element={<Services />} />
                 <Route path="/gallery" element={<Gallery />} />
                 <Route path="/email-test" element={<EmailTest />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/admin/download" element={<AdminDownload />} />
 
@@ -81,6 +84,7 @@ const AppContent = ({ onRouteChange }: { onRouteChange: () => void }) => {
                 <Route path="*" element={<Navigate to={Capacitor.isNativePlatform() ? "/admin" : "/"} replace />} />
             </Routes>
             {!isAdminRoute && <Footer />}
+            {!isAdminRoute && <CookieConsent />}
             <BookingModal />
         </div>
     );

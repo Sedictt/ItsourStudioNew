@@ -58,7 +58,6 @@ const Footer = () => {
                             <h4>Services</h4>
                             <a href="/#booking">Book Session</a>
                             <Link to="/services">Pricing</Link>
-                            <a href="#">Gift Cards</a>
                             <Link to="/faq">FAQ</Link>
                         </div>
                         <div className="footer-column">

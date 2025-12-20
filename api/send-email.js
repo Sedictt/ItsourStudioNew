@@ -3,7 +3,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Email Templates
-const getConfirmedEmail = (booking) => `
+const getConfirmedEmail = (booking) => {
+    const refDisplay = booking.referenceNumber ? `<div style="margin-top: 8px; font-size: 18px; font-weight: 800; color: #bf6a39; font-family: monospace; letter-spacing: 1px;">${booking.referenceNumber}</div>` : '';
+
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -27,7 +30,7 @@ const getConfirmedEmail = (booking) => `
                 <div style="background-color: #fff; border: 2px dashed #fed7aa; border-radius: 16px; position: relative; overflow: hidden;">
                     <div style="background-color: #fff7ed; padding: 15px; text-align: center; border-bottom: 2px dashed #fed7aa;">
                         <span style="font-size: 12px; font-weight: 700; color: #9a3412; letter-spacing: 2px; text-transform: uppercase;">— SESSION PASS —</span>
-                        ${booking.referenceNumber ? `<div style="margin-top: 8px; font-size: 18px; font-weight: 800; color: #bf6a39; font-family: monospace; letter-spacing: 1px;">${booking.referenceNumber}</div>` : ''}
+                        ${refDisplay}
                     </div>
                     <div style="padding: 25px;">
                         <table style="width: 100%;">
@@ -79,8 +82,17 @@ const getConfirmedEmail = (booking) => `
     </div>
 </body>
 </html>`;
+};
 
-const getReceivedEmail = (booking) => `
+const getReceivedEmail = (booking) => {
+    const referenceSection = booking.referenceNumber ? `
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">Your Booking Reference</p>
+                    <div style="display: inline-block; background-color: #f3f4f6; padding: 10px 25px; border-radius: 8px; font-size: 20px; font-weight: 800; color: #1f2937; font-family: monospace; letter-spacing: 2px;">${booking.referenceNumber}</div>
+                    <p style="margin: 8px 0 0; font-size: 11px; color: #9ca3af;">Include this in your GCash payment notes</p>
+                </div>` : '';
+
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -99,13 +111,7 @@ const getReceivedEmail = (booking) => `
                 <p style="color: #374151; font-size: 16px; line-height: 1.6; text-align: center; margin-bottom: 20px;">
                     Thanks for choosing It's ouR Studio! Your slot is <strong>reserved temporarily</strong>. <br>To lock it in, please complete the 50% downpayment below.
                 </p>
-                ${booking.referenceNumber ? `
-                <div style="text-align: center; margin-bottom: 25px;">
-                    <p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase; font-weight: 600;">Your Booking Reference</p>
-                    <div style="display: inline-block; background-color: #f3f4f6; padding: 10px 25px; border-radius: 8px; font-size: 20px; font-weight: 800; color: #1f2937; font-family: monospace; letter-spacing: 2px;">${booking.referenceNumber}</div>
-                    <p style="margin: 8px 0 0; font-size: 11px; color: #9ca3af;">Include this in your GCash payment notes</p>
-                </div>
-                ` : ''}
+                ${referenceSection}
                 <div style="background: linear-gradient(135deg, #ffffff 0%, #fff7ed 100%); border: 1px solid #fed7aa; border-radius: 16px; padding: 0; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);">
                     <div style="padding: 30px 20px; text-align: center;">
                         <p style="margin: 0; font-size: 13px; color: #9ca3af; text-transform: uppercase; font-weight: 600; letter-spacing: 1px;">Total Downpayment Due</p>
@@ -130,8 +136,12 @@ const getReceivedEmail = (booking) => `
     </div>
 </body>
 </html>`;
+};
 
-const getRejectedEmail = (booking) => `
+const getRejectedEmail = (booking) => {
+    const refLine = booking.referenceNumber ? `<p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Reference: <strong style="color: #374151;">${booking.referenceNumber}</strong></p>` : '';
+
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -153,7 +163,7 @@ const getRejectedEmail = (booking) => `
                     <p style="margin: 0; color: #7f1d1d; font-size: 16px; line-height: 1.5;">${booking.reason}</p>
                 </div>
                 <div style="margin-top: 30px; border-top: 1px solid #f3f4f6; padding-top: 20px;">
-                    ${booking.referenceNumber ? `<p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Reference: <strong style="color: #374151;">${booking.referenceNumber}</strong></p>` : ''}
+                    ${refLine}
                     <p style="margin: 0 0 5px; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Regarding Request For</p>
                     <p style="margin: 0; font-size: 15px; color: #374151; font-weight: 500;">${booking.package} on ${booking.date}</p>
                 </div>
@@ -165,6 +175,7 @@ const getRejectedEmail = (booking) => `
     </div>
 </body>
 </html>`;
+};
 
 const getContactEmail = (contact) => `
 <!DOCTYPE html>

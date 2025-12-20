@@ -12,6 +12,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminLogin from './pages/AdminLogin';
 import AdminDownload from './pages/AdminDownload';
 import CookieConsent from './components/CookieConsent';
+import FAQ from './pages/FAQ';
 
 import { BookingProvider } from './context/BookingContext';
 import BookingModal from './components/BookingModal';
@@ -64,6 +65,7 @@ const AppContent = ({ onRouteChange }: { onRouteChange: () => void }) => {
                 <Route path="/gallery" element={<Gallery />} />
                 <Route path="/email-test" element={<EmailTest />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/faq" element={<FAQ />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/admin/download" element={<AdminDownload />} />
 

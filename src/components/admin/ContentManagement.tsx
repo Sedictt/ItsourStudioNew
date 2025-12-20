@@ -50,6 +50,13 @@ interface BackdropColor {
     order: number;
 }
 
+interface FAQItem {
+    id: string;
+    question: string;
+    answer: string;
+    order: number;
+}
+
 const ContentManagement = ({ showToast }: ContentManagementProps) => {
     // Content State
     const [content, setContent] = useState<SiteContent>({
@@ -105,9 +112,15 @@ const ContentManagement = ({ showToast }: ContentManagementProps) => {
     const [editingBackdropId, setEditingBackdropId] = useState<string | null>(null);
 
     // Navigation State
-    const [activeSection, setActiveSection] = useState<'promoBanner' | 'seasonalPromo' | 'about' | 'footer' | 'backdrops'>('promoBanner');
+    const [activeSection, setActiveSection] = useState<'promoBanner' | 'seasonalPromo' | 'about' | 'footer' | 'backdrops' | 'faq'>('promoBanner');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(true); // For mobile view navigation
     const [isBackdropModalOpen, setIsBackdropModalOpen] = useState(false);
+
+    // FAQ State
+    const [faqs, setFaqs] = useState<FAQItem[]>([]);
+    const [faqForm, setFaqForm] = useState<FAQItem>({ id: '', question: '', answer: '', order: 0 });
+    const [editingFaqId, setEditingFaqId] = useState<string | null>(null);
+    const [isFaqModalOpen, setIsFaqModalOpen] = useState(false);
 
     // Fetch Site Content
     useEffect(() => {
@@ -116,12 +129,15 @@ const ContentManagement = ({ showToast }: ContentManagementProps) => {
                 const aboutDoc = await getDoc(doc(db, 'siteContent', 'about'));
                 const footerDoc = await getDoc(doc(db, 'siteContent', 'footer'));
                 const promoDoc = await getDoc(doc(db, 'siteContent', 'promoBanner'));
+
                 const seasonalDoc = await getDoc(doc(db, 'siteContent', 'seasonalPromo'));
+                const faqDoc = await getDoc(doc(db, 'siteContent', 'faq'));
 
                 if (aboutDoc.exists()) setContent(prev => ({ ...prev, about: aboutDoc.data() as any }));
                 if (footerDoc.exists()) setContent(prev => ({ ...prev, footer: footerDoc.data() as any }));
                 if (promoDoc.exists()) setContent(prev => ({ ...prev, promoBanner: promoDoc.data() as any }));
                 if (seasonalDoc.exists()) setContent(prev => ({ ...prev, seasonalPromo: seasonalDoc.data() as any }));
+                if (faqDoc.exists()) setFaqs(faqDoc.data().items || []);
             } catch (err) {
                 console.log("No content found, using defaults");
             }
@@ -356,6 +372,55 @@ const ContentManagement = ({ showToast }: ContentManagementProps) => {
         }
     };
 
+    // FAQ Functions
+    const handleEditFaq = (faq: FAQItem) => {
+        setEditingFaqId(faq.id);
+        setFaqForm(faq);
+        setIsBackdropModalOpen(false); // Close other modals if any
+        setIsFaqModalOpen(true);
+    };
+
+    const handleCancelFaqEdit = () => {
+        setEditingFaqId(null);
+        setFaqForm({ id: '', question: '', answer: '', order: faqs.length + 1 });
+        setIsFaqModalOpen(false);
+    };
+
+    const handleSaveFaq = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            let updatedFaqs = [...faqs];
+            if (editingFaqId) {
+                updatedFaqs = updatedFaqs.map(f => f.id === editingFaqId ? { ...faqForm, id: editingFaqId } : f);
+                showToast('success', 'Updated', 'FAQ updated');
+            } else {
+                const newFaq = { ...faqForm, id: `faq-${Date.now()}` };
+                updatedFaqs.push(newFaq);
+                showToast('success', 'Created', 'FAQ created');
+            }
+            updatedFaqs.sort((a, b) => a.order - b.order);
+            setFaqs(updatedFaqs);
+            await setDoc(doc(db, 'siteContent', 'faq'), { items: updatedFaqs });
+            handleCancelFaqEdit();
+        } catch (error) {
+            console.error("Error saving FAQ:", error);
+            showToast('error', 'Error', 'Failed to save FAQ');
+        }
+    };
+
+    const handleDeleteFaq = async (id: string) => {
+        if (!window.confirm("Delete this FAQ?")) return;
+        try {
+            const updatedFaqs = faqs.filter(f => f.id !== id);
+            setFaqs(updatedFaqs);
+            await setDoc(doc(db, 'siteContent', 'faq'), { items: updatedFaqs });
+            showToast('success', 'Deleted', 'FAQ deleted');
+        } catch (error) {
+            console.error("Error deleting FAQ:", error);
+            showToast('error', 'Error', 'Failed to delete FAQ');
+        }
+    };
+
     const navigateToSection = (section: typeof activeSection) => {
         setActiveSection(section);
         setIsMobileMenuOpen(false);
@@ -415,6 +480,18 @@ const ContentManagement = ({ showToast }: ContentManagementProps) => {
                         <div className="nav-arrow">›</div>
                     </button>
 
+                    <button
+                        className={`content-nav-btn ${activeSection === 'faq' ? 'active' : ''}`}
+                        onClick={() => navigateToSection('faq')}
+                    >
+                        <div className="nav-icon">❓</div>
+                        <div className="nav-label">
+                            <span>FAQ</span>
+                            <small>Questions & Answers</small>
+                        </div>
+                        <div className="nav-arrow">›</div>
+                    </button>
+
                     <div className="sidebar-group-title" style={{ marginTop: '1rem' }}>Tools</div>
                     <button
                         className={`content-nav-btn ${activeSection === 'backdrops' ? 'active' : ''}`}
@@ -439,7 +516,8 @@ const ContentManagement = ({ showToast }: ContentManagementProps) => {
                         <h3>{activeSection === 'promoBanner' ? 'Promo Banner' :
                             activeSection === 'seasonalPromo' ? 'Seasonal Promo' :
                                 activeSection === 'about' ? 'About Section' :
-                                    activeSection === 'footer' ? 'Footer Info' : 'Backdrops'}</h3>
+                                    activeSection === 'footer' ? 'Footer Info' :
+                                        activeSection === 'faq' ? 'FAQ Management' : 'Backdrops'}</h3>
                     </div>
 
                     {/* Promo Banner Edit */}
@@ -1064,6 +1142,103 @@ const ContentManagement = ({ showToast }: ContentManagementProps) => {
                             </div>
                         </div>
                     )}
+
+
+                    {/* FAQ Management Section */}
+                    {activeSection === 'faq' && (
+                        <div className="content-card">
+                            <div className="card-header">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <h4>Frequently Asked Questions</h4>
+                                        <p>Manage common questions for your customers.</p>
+                                    </div>
+                                    <button className="btn btn-primary" onClick={() => {
+                                        setFaqForm({ id: '', question: '', answer: '', order: faqs.length + 1 });
+                                        setIsFaqModalOpen(true);
+                                    }}>
+                                        + Add Question
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="card-body">
+                                <div className="backdrop-grid">
+                                    {faqs.map(faq => (
+                                        <div key={faq.id} className="backdrop-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <h5 style={{ margin: 0, fontSize: '1rem' }}>{faq.question}</h5>
+                                                    <span className="badge" style={{ background: '#eee', color: '#666' }}>#{faq.order}</span>
+                                                </div>
+                                                <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem', whiteSpace: 'pre-wrap' }}>{faq.answer}</p>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                                                <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => handleEditFaq(faq)}>Edit</button>
+                                                <button className="btn btn-outline btn-sm" style={{ flex: 1, borderColor: '#ff4d4f', color: '#ff4d4f' }} onClick={() => handleDeleteFaq(faq.id)}>Delete</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {faqs.length === 0 && (
+                                        <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#888', background: '#f9f9f9', borderRadius: '8px' }}>
+                                            No FAQs added yet. Click "Add Question" to start.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* FAQ Modal */}
+                    {isFaqModalOpen && (
+                        <div className="modal-overlay" onClick={handleCancelFaqEdit}>
+                            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                                <div className="modal-header">
+                                    <h3>{editingFaqId ? 'Edit Question' : 'Add New Question'}</h3>
+                                    <button className="close-btn" onClick={handleCancelFaqEdit}>&times;</button>
+                                </div>
+                                <form onSubmit={handleSaveFaq}>
+                                    <div className="modal-body">
+                                        <div className="full-width">
+                                            <label className="form-label">Question</label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={faqForm.question}
+                                                onChange={e => setFaqForm({ ...faqForm, question: e.target.value })}
+                                                required
+                                                placeholder="e.g. How do I book?"
+                                            />
+                                        </div>
+                                        <div className="full-width">
+                                            <label className="form-label">Answer</label>
+                                            <textarea
+                                                className="form-input"
+                                                rows={4}
+                                                value={faqForm.answer}
+                                                onChange={e => setFaqForm({ ...faqForm, answer: e.target.value })}
+                                                required
+                                                placeholder="Enter the answer here..."
+                                            ></textarea>
+                                        </div>
+                                        <div className="full-width">
+                                            <label className="form-label">Display Order</label>
+                                            <input
+                                                type="number"
+                                                className="form-input"
+                                                value={faqForm.order}
+                                                onChange={e => setFaqForm({ ...faqForm, order: parseInt(e.target.value) || 0 })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                        <button type="button" className="btn btn-outline" onClick={handleCancelFaqEdit}>Cancel</button>
+                                        <button type="submit" className="btn btn-primary">{editingFaqId ? 'Update' : 'Add'}</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
 
 
                 </div>

@@ -5331,3 +5331,97 @@ section {
     transform: rotate(360deg);
   }
 }
+
+/* ===================================
+   MOBILE PERFORMANCE OPTIMIZATIONS
+   Reduces GPU-intensive effects on mobile
+   =================================== */
+
+@media (max-width: 768px) {
+
+  /* Disable backdrop-filter blur on mobile - very GPU intensive */
+  .navbar,
+  .navbar.scrolled,
+  .modal-overlay,
+  .booking-modal,
+  .hero-content,
+  .hero::after,
+  .testimonial-card,
+  .glass-card,
+  [class*="glass"],
+  .promo-section-content,
+  .service-fullscreen::before {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Ensure navbrand is still visible with background fallback */
+  .navbar.scrolled {
+    background: rgba(255, 244, 230, 0.98) !important;
+  }
+
+  /* Reduce or disable floating orb animations */
+  .hero-orb,
+  .hero-orb1,
+  .hero-orb2,
+  .floating-orb,
+  .loading-orb,
+  .decorative-circle,
+  [class*="orb"] {
+    animation: none !important;
+    opacity: 0.15 !important;
+  }
+
+  /* Disable parallax transforms on hero elements */
+  .hero-content,
+  .hero-image-container,
+  .hero-text {
+    transform: none !important;
+    will-change: auto !important;
+  }
+
+  /* Reduce transition durations */
+  * {
+    transition-duration: 0.15s !important;
+  }
+
+  /* Disable complex box shadows on mobile */
+  .card,
+  .service-card,
+  .testimonial-card,
+  .package-card,
+  .info-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  /* Disable grain overlay on mobile */
+  body::before {
+    display: none !important;
+  }
+
+  /* Reduce gradient complexity */
+  .hero::before,
+  .hero-overlay {
+    background: rgba(59, 44, 40, 0.5) !important;
+  }
+}
+
+/* For users who prefer reduced motion (accessibility + performance) */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .hero-orb,
+  .floating-orb,
+  [class*="orb"],
+  [class*="animate"] {
+    animation: none !important;
+  }
+}

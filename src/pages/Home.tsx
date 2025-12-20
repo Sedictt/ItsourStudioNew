@@ -147,8 +147,9 @@ const Home = () => {
     const rafRef = useRef<number | null>(null);
 
     const handleHeroMouseMove = useCallback((e: React.MouseEvent) => {
-        // Disable parallax on mobile (640px or less)
-        if (window.innerWidth <= 640) return;
+        // Disable parallax on mobile/touch devices (performance optimization)
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (isTouchDevice || window.innerWidth <= 1024) return;
 
         if (!heroRef.current || rafRef.current) return;
 

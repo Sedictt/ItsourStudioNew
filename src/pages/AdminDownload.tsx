@@ -87,6 +87,13 @@ const AdminDownload = () => {
                             <span>Continue to Web Version</span>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                         </button>
+
+                        <div className="security-notice">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            <p>
+                                <strong>Windows User?</strong> If SmartScreen appears, click <span className="underline">More info</span> then <span className="underline">Run anyway</span>.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -385,6 +392,37 @@ const AdminDownload = () => {
                 }
 
                 .web-link:hover {
+                    color: #fff;
+                }
+
+                .security-notice {
+                    margin-top: 10px;
+                    padding: 12px;
+                    background: rgba(255, 193, 7, 0.1);
+                    border: 1px solid rgba(255, 193, 7, 0.2);
+                    border-radius: 12px;
+                    font-size: 0.75rem;
+                    color: rgba(255, 255, 255, 0.7);
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 10px;
+                    text-align: left;
+                    line-height: 1.4;
+                }
+
+                .security-notice svg {
+                    color: #ffc107;
+                    flex-shrink: 0;
+                    margin-top: 2px;
+                }
+
+                .security-notice strong {
+                    color: #ffc107;
+                    font-weight: 600;
+                }
+
+                .security-notice .underline {
+                    text-decoration: underline;
                     color: #fff;
                 }
 

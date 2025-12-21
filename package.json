@@ -2,6 +2,10 @@
   "name": "its-our-studio-admin",
   "private": true,
   "version": "1.0.0",
+  "description": "Official Admin Dashboard for Its Our Studio",
+  "author": "Its Our Studio",
+  "homepage": "https://itsour-studio.vercel.app",
+  "license": "UNLICENSED",
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {

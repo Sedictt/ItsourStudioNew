@@ -19,7 +19,7 @@ const AdminDownload = () => {
                             <h1>IoS <span className="highlight">Admin</span></h1>
                             <div className="version-badge">
                                 <span className="pulse-dot"></span>
-                                v1.1.0 Stable
+                                v1.0.0 Stable
                             </div>
                         </div>
                     </div>
@@ -56,7 +56,7 @@ const AdminDownload = () => {
 
                     <div className="action-area fade-slide-up" style={{ animationDelay: '0.4s' }}>
                         <div className="download-options-column">
-                            <a href="/downloads/Its_Our_Studio_Admin_Setup1.exe" className="download-button windows" download>
+                            <a href="/downloads/Its%20Our%20Studio%20Admin_1.0.0_x64_en-US.msi" className="download-button windows" download>
                                 <div className="btn-shine"></div>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="dl-icon">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -65,7 +65,7 @@ const AdminDownload = () => {
                                 </svg>
                                 <div className="btn-label-group">
                                     <span className="btn-text">Download for Windows</span>
-                                    <span className="btn-meta">v1.1.0 • 4.5MB</span>
+                                    <span className="btn-meta">v1.0.0 • 81.6MB</span>
                                 </div>
                             </a>
 

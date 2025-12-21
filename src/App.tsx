@@ -2,8 +2,8 @@ import { type ReactElement, useState, useEffect, useCallback, useRef } from 'rea
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 
-// Check if running inside Tauri (desktop app)
-const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+// Check if running inside Tauri (desktop app) - build-time check or runtime fallback
+const isTauri = import.meta.env.VITE_BUILD_TARGET === 'tauri' || (typeof window !== 'undefined' && ('__TAURI__' in window || navigator.userAgent.includes('Tauri')));
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';

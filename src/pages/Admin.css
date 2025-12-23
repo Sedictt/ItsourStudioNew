@@ -207,6 +207,7 @@
     text-transform: uppercase;
     letter-spacing: 1px;
     border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
 }
 
 .bookings-table tr:hover td {
@@ -975,9 +976,10 @@
 }
 
 .sort-indicator {
-    display: inline-block;
-    vertical-align: middle;
-    margin-left: 0.5rem;
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
     opacity: 0.5;
 }
 
